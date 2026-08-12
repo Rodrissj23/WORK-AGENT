@@ -1,54 +1,16 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Work Agent — centro operativo de Rodrigo">
-<title>Work Agent</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
-</head>
-<body>
-<div class="deck">
-<header class="masthead">
-  <div class="masthead-left"><span class="mark">WA</span><div><div class="brand">WORK AGENT</div><div class="brand-sub">centro operativo — Rodrigo</div></div></div>
-  <div class="masthead-right"><span class="clock" id="clock">--:--:--</span><span class="pulse"><i></i>en línea</span></div>
-</header>
-
-<section class="assistant-hero">
-  <div><div class="parte-label">PARTE DIARIO · <span id="today"></span></div><h1 id="greeting">Buen día, Rodrigo.</h1><p>Tu operación, tus automatizaciones y tus próximos pendientes en un solo lugar.</p></div>
-  <div class="assistant-badge"><span>V2</span><strong>WORK ASSISTANT</strong><small>base operativa</small></div>
-</section>
-
-<section class="command-center">
-  <div class="command-label">COMANDO RÁPIDO</div>
-  <div class="command-row">
-    <input id="command-input" type="text" autocomplete="off" placeholder="Escribí: m9, v6m, mora, scoring, liquidaciones...">
-    <button id="command-run" type="button">Ejecutar →</button>
-  </div>
-  <div class="command-hints">Probá <code>m9</code> · <code>v3m</code> · <code>mora</code> · <code>scoring</code> · <code>mi liquidacion</code></div>
-  <div id="command-feedback" class="command-feedback"></div>
-</section>
-
-<section class="daily-grid three">
-  <article class="daily-card"><span class="daily-kicker">SCORING</span><strong>18:00</strong><p>Próximo reporte automático</p><span class="mini-status ok">● operativo</span></article>
-  <article class="daily-card"><span class="daily-kicker">MORA</span><strong>Motor local</strong><p>Control de estados y cuotas</p><span class="mini-status ok">● operativo</span></article>
-  <article class="daily-card pending"><span class="daily-kicker">GMAIL</span><strong>En preparación</strong><p>Filtro por remitentes importantes del trabajo</p><span class="mini-status">○ falta publicar API</span></article>
-</section>
-
-<section class="block">
-  <div class="block-head"><h2>Sistemas</h2><span class="block-count" id="project-count"></span></div>
-  <div class="grid" id="projects"></div>
-</section>
-
-<section class="block">
-  <div class="block-head"><h2>Próximo salto</h2><span class="block-sub">assistant layer</span></div>
-  <div class="future-row" id="future"></div>
-</section>
-<footer class="statusbar" id="statusbar"></footer>
-</div>
-<script src="app.js"></script>
-</body>
-</html>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Work Agent — centro operativo de Rodrigo"><title>Work Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css">
+</head><body><div class="deck">
+<header class="masthead"><div class="masthead-left"><span class="mark">WA</span><div><div class="brand">WORK AGENT</div><div class="brand-sub">centro operativo — Rodrigo</div></div></div><div class="masthead-right"><span class="clock" id="clock">--:--:--</span><span class="pulse"><i></i>en línea</span></div></header>
+<section class="assistant-hero"><div><div class="parte-label">PARTE DIARIO · <span id="today"></span></div><h1 id="greeting">Buen día, Rodrigo.</h1><p>Tu operación, tus automatizaciones y tus próximos pendientes en un solo lugar.</p></div><div class="assistant-badge"><span>V2</span><strong>WORK ASSISTANT</strong><small>base operativa</small></div></section>
+<section class="command-center"><div class="command-label">COMANDO RÁPIDO</div><div class="command-row"><input id="command-input" type="text" autocomplete="off" placeholder="Escribí: m9, v6m, mora, scoring, liquidaciones..."><button id="command-run" type="button">Ejecutar →</button></div><div class="command-hints">Probá <code>m9</code> · <code>v3m</code> · <code>mora</code> · <code>scoring</code> · <code>mi liquidacion</code></div><div id="command-feedback" class="command-feedback"></div></section>
+<section class="attention block"><div class="block-head"><div><span class="attention-eyebrow">CENTRO DE ATENCIÓN</span><h2>Qué necesita tu atención</h2></div><span class="block-sub">prioridad operativa</span></div><div id="attention-list" class="attention-list"></div></section>
+<section class="daily-grid three"><article class="daily-card"><span class="daily-kicker">SCORING</span><strong>18:00</strong><p>Reporte automático de lunes a viernes</p><span class="mini-status ok">● operativo</span></article><article class="daily-card"><span class="daily-kicker">MORA</span><strong>Motor local</strong><p>Control de estados y cuotas</p><span class="mini-status ok">● operativo</span></article><article class="daily-card pending"><span class="daily-kicker">GMAIL</span><strong>En preparación</strong><p>Filtro por remitentes importantes del trabajo</p><span class="mini-status">○ falta publicar API</span></article></section>
+<section class="block"><div class="block-head"><h2>Sistemas</h2><span class="block-count" id="project-count"></span></div><div class="grid" id="projects"></div></section>
+<section class="block"><div class="block-head"><h2>Próximo salto</h2><span class="block-sub">assistant layer</span></div><div class="future-row" id="future"></div></section>
+<footer class="statusbar" id="statusbar"></footer></div><script src="app.js"></script></body></html>
