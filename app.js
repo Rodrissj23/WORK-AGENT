@@ -14,9 +14,9 @@ const projects = [
   {
     id: "WH-02",
     name: "Mora automatizada",
-    description: "Detección y seguimiento automático de casos de mora. Código listo, falta el frontend.",
-    status: "desarrollo",
-    url: "#"
+    description: "Motor Python operativo: consulta Prevención, actualiza estados, cuotas e historial de cambios. Corre localmente en la PC del trabajo.",
+    status: "activo",
+    url: "mora.html"
   },
   {
     id: "WH-03",
