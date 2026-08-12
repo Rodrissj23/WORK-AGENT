@@ -22,11 +22,20 @@
   <div class="assistant-badge"><span>V2</span><strong>WORK ASSISTANT</strong><small>base operativa</small></div>
 </section>
 
-<section class="daily-grid">
+<section class="command-center">
+  <div class="command-label">COMANDO RÁPIDO</div>
+  <div class="command-row">
+    <input id="command-input" type="text" autocomplete="off" placeholder="Escribí: m9, v6m, mora, scoring, liquidaciones...">
+    <button id="command-run" type="button">Ejecutar →</button>
+  </div>
+  <div class="command-hints">Probá <code>m9</code> · <code>v3m</code> · <code>mora</code> · <code>scoring</code> · <code>mi liquidacion</code></div>
+  <div id="command-feedback" class="command-feedback"></div>
+</section>
+
+<section class="daily-grid three">
   <article class="daily-card"><span class="daily-kicker">SCORING</span><strong>18:00</strong><p>Próximo reporte automático</p><span class="mini-status ok">● operativo</span></article>
   <article class="daily-card"><span class="daily-kicker">MORA</span><strong>Motor local</strong><p>Control de estados y cuotas</p><span class="mini-status ok">● operativo</span></article>
-  <article class="daily-card pending"><span class="daily-kicker">CALENDAR</span><strong>Próximamente</strong><p>Eventos y reuniones del día</p><span class="mini-status">○ sin conectar</span></article>
-  <article class="daily-card pending"><span class="daily-kicker">GMAIL</span><strong>Próximamente</strong><p>Mails y pendientes importantes</p><span class="mini-status">○ sin conectar</span></article>
+  <article class="daily-card pending"><span class="daily-kicker">GMAIL</span><strong>En preparación</strong><p>Filtro por remitentes importantes del trabajo</p><span class="mini-status">○ falta publicar API</span></article>
 </section>
 
 <section class="block">
