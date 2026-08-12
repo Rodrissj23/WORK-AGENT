@@ -1,5 +1,5 @@
 const projects=[{id:"WH-01",name:"Scoring automático",description:"Genera el reporte diario por broker, lo archiva en Drive y lo envía por mail. Ejecución automática de lunes a viernes a las 18 hs.",status:"activo",url:"https://drive.google.com/drive/folders/1tPFUEsRC2ZB-OmmN94o8RdsIokMniZ3b"},{id:"WH-02",name:"Mora automatizada",description:"Motor Python operativo: consulta Prevención y actualiza estados, cuotas e historial de cambios desde la PC del trabajo.",status:"activo",url:"mora.html"},{id:"WH-03",name:"Mini Hub — Prevención",description:"Consulta rápida de percentiles de menores por sexo y edad: altura y peso de referencia.",status:"activo",url:"https://rodrissj23.github.io/MINI-HUB---PREVENCION/"},{id:"WH-04",name:"Control de liquidaciones",description:"Cruza Altas vs. Ventas por cápitas y detecta diferencias en la liquidación mensual.",status:"activo",url:"https://rodrissj23.github.io/control-liquidaciones/"},{id:"WH-05",name:"Mi liquidación",description:"Dashboard de comisiones: ventas, comisión esperada vs. liquidada y diferencias.",status:"activo",url:"https://rodrissj23.github.io/DASHBOARD-COMISIONES/"}];
-const futureItems=[{icon:"◷",name:"Calendar",desc:"Agenda real, eventos y reuniones del día."},{icon:"✉",name:"Gmail",desc:"Mails importantes y pendientes."},{icon:"◌",name:"WhatsApp",desc:"Canal de trabajo y consultas."},{icon:"✦",name:"Assistant",desc:"Resumen, alertas y acciones desde un solo lugar."}];
+const futureItems=[{icon:"✉",name:"Gmail",desc:"Mails laborales filtrados por remitentes importantes."},{icon:"◌",name:"WhatsApp",desc:"Canal de trabajo y consultas."},{icon:"✦",name:"Assistant",desc:"Resumen, alertas y acciones desde un solo lugar."}];
 const statusLabel={activo:"ACTIVO",desarrollo:"EN DESARROLLO",planificado:"PLANIFICADO"};
 const grid=document.querySelector("#projects"),countEl=document.querySelector("#project-count");
 const activos=projects.filter(p=>p.status==="activo").length,desarrollo=projects.filter(p=>p.status==="desarrollo").length;
@@ -10,3 +10,19 @@ document.querySelector("#statusbar").innerHTML=`<span>proyectos activos: <b>${ac
 const dayFmt=new Intl.DateTimeFormat("es-AR",{day:"2-digit",month:"long",year:"numeric"});document.querySelector("#today").textContent=dayFmt.format(new Date());
 function updateGreeting(){const h=new Date().getHours();document.querySelector("#greeting").textContent=`${h<12?"Buen día":h<19?"Buenas tardes":"Buenas noches"}, Rodrigo.`}updateGreeting();
 function tickClock(){const clock=document.querySelector("#clock");if(clock)clock.textContent=new Date().toLocaleTimeString("es-AR",{hour12:false})}tickClock();setInterval(tickClock,1000);
+
+const commandInput=document.querySelector('#command-input');
+const commandRun=document.querySelector('#command-run');
+const commandFeedback=document.querySelector('#command-feedback');
+function normalizeCommand(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/\s+/g,' ')}
+function openTarget(url){window.open(url,'_blank','noopener,noreferrer')}
+function runCommand(){const raw=commandInput.value.trim();const q=normalizeCommand(raw);commandFeedback.classList.remove('error');if(!q){commandFeedback.textContent='Escribí un comando.';commandFeedback.classList.add('error');return}
+  if(/^[mvfh]\d{1,2}m?$/.test(q)||/^(mujer|varon|hombre|nena|nene|femenino|masculino)\s+\d+/.test(q)){commandFeedback.textContent=`Abriendo Mini Hub con “${raw}”…`;openTarget(`https://rodrissj23.github.io/MINI-HUB---PREVENCION/?q=${encodeURIComponent(raw)}`);return}
+  if(q.includes('mora')){commandFeedback.textContent='Abriendo Mora automatizada…';openTarget('mora.html');return}
+  if(q.includes('scoring')||q.includes('reporte')){commandFeedback.textContent='Abriendo Scoring…';openTarget('https://drive.google.com/drive/folders/1tPFUEsRC2ZB-OmmN94o8RdsIokMniZ3b');return}
+  if(q.includes('control')&&q.includes('liquid')){commandFeedback.textContent='Abriendo Control de liquidaciones…';openTarget('https://rodrissj23.github.io/control-liquidaciones/');return}
+  if(q.includes('mi liquid')||q.includes('comision')){commandFeedback.textContent='Abriendo Mi liquidación…';openTarget('https://rodrissj23.github.io/DASHBOARD-COMISIONES/');return}
+  if(q==='liquidaciones'||q==='liquidacion'){commandFeedback.textContent='¿Control o Mi liquidación? Probá “control liquidaciones” o “mi liquidacion”.';commandFeedback.classList.add('error');return}
+  commandFeedback.textContent='No reconozco ese comando todavía.';commandFeedback.classList.add('error');
+}
+commandRun.addEventListener('click',runCommand);commandInput.addEventListener('keydown',e=>{if(e.key==='Enter')runCommand()});
