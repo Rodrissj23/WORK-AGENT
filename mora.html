@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mora automatizada · Work Agent</title>
+  <style>
+    :root{--bg:#0b1118;--panel:#121a24;--line:#24303d;--text:#eef3f7;--muted:#8d99a6;--ok:#74dda1;--warn:#ffc36f;--blue:#88adff}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0a1016,#0d141d);color:var(--text);font-family:Inter,Arial,sans-serif;min-height:100vh}
+    .wrap{max-width:980px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:34px}.brand{font-weight:700;letter-spacing:.06em}.back{color:var(--muted);text-decoration:none}.hero{padding:28px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.02);margin-bottom:18px}.eyebrow{font-size:12px;color:var(--blue);letter-spacing:.13em}.hero h1{font-size:42px;margin:8px 0 10px}.hero p{color:var(--muted);max-width:720px;line-height:1.6}.status{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:7px 10px;border-radius:999px;background:rgba(116,221,161,.1);color:var(--ok);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.card{border:1px solid var(--line);border-radius:16px;padding:18px;background:var(--panel)}.card h2{font-size:15px;margin:0 0 14px}.item{display:flex;justify-content:space-between;gap:20px;padding:9px 0;border-top:1px solid rgba(255,255,255,.06);font-size:13px}.item:first-of-type{border-top:0}.item span{color:var(--muted)}.tag{font-family:monospace;color:var(--text)}.note{margin-top:16px;border:1px solid var(--line);border-radius:16px;padding:18px;background:rgba(255,255,255,.02)}.note strong{color:var(--warn)}.note p{color:var(--muted);line-height:1.6;margin-bottom:0}.footer{margin-top:28px;color:#65717f;font-size:12px}
+    @media(max-width:700px){.grid{grid-template-columns:1fr}.hero h1{font-size:32px}.top{align-items:flex-start;gap:20px}.wrap{padding:18px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">WORK AGENT · WH-02</div>
+      <a class="back" href="./">← volver al Hub</a>
+    </div>
+
+    <section class="hero">
+      <div class="eyebrow">MÓDULO LOCAL</div>
+      <h1>Mora automatizada</h1>
+      <p>Motor Python que consulta el portal de Prevención Salud, revisa cobranzas por DNI y mantiene actualizados los estados y cuotas de la planilla operativa.</p>
+      <div class="status"><span class="dot"></span> Motor operativo · validación de corrida completa</div>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Qué controla</h2>
+        <div class="item"><span>Estado</span><b class="tag">✅ ACTIVO / ⚠️ MORA / ❌ BAJA / ⏳ PENDIENTE</b></div>
+        <div class="item"><span>Cuotas emitidas</span><b>Automático</b></div>
+        <div class="item"><span>Cuotas pagas</span><b>Automático</b></div>
+        <div class="item"><span>Cuotas impagas</span><b>Emitidas − Pagas</b></div>
+        <div class="item"><span>Última actualización</span><b>Solo ante cambio real</b></div>
+      </section>
+
+      <section class="card">
+        <h2>Cómo corre</h2>
+        <div class="item"><span>Motor</span><b>Python + Playwright</b></div>
+        <div class="item"><span>Portal</span><b>Prevención Salud</b></div>
+        <div class="item"><span>Datos</span><b>Google Sheets</b></div>
+        <div class="item"><span>Ejecución actual</span><b>PC del trabajo</b></div>
+        <div class="item"><span>Frontend</span><b>Work Agent</b></div>
+      </section>
+    </div>
+
+    <section class="note">
+      <strong>Importante</strong>
+      <p>Este módulo todavía no puede iniciarse desde GitHub Pages porque necesita Python, credenciales locales y una sesión real en el portal. La siguiente evolución será exponer estado, métricas e inicio de ejecución mediante un pequeño servicio local conectado al Work Agent.</p>
+    </section>
+
+    <div class="footer">Mora V1 · Work Agent ecosystem</div>
+  </div>
+</body>
+</html>
