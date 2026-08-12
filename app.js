@@ -7,9 +7,9 @@ const projects = [
   {
     id: "WH-01",
     name: "Scoring automático",
-    description: "Genera y envía el reporte diario de ventas por WhatsApp, filtrado por gerente-broker.",
-    status: "desarrollo", // activo | desarrollo | planificado
-    url: "#"
+    description: "Genera el reporte diario por broker, lo archiva en Drive y lo envía por mail. Ejecución automática de lunes a viernes a las 18 hs.",
+    status: "activo", // activo | desarrollo | planificado
+    url: "https://drive.google.com/drive/folders/1tPFUEsRC2ZB-OmmN94o8RdsIokMniZ3b"
   },
   {
     id: "WH-02",
