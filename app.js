@@ -21,9 +21,9 @@ const projects = [
   {
     id: "WH-03",
     name: "Mini Hub — Prevención",
-    description: "Consulta rápida de cuotas y pesos de menores en Prevención Salud.",
-    status: "planificado",
-    url: "#"
+    description: "Consulta rápida de percentiles de menores por sexo y edad: altura y peso de referencia.",
+    status: "activo",
+    url: "https://rodrissj23.github.io/MINI-HUB---PREVENCION/"
   },
   {
     id: "WH-04",
