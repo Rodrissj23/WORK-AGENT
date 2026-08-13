@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
-"""ZERO local bridge.
+"""ZERO local bridge (fallback).
 
-Runs on the work PC and exposes operational telemetry to WORK AGENT.
-No credentials are stored here. Other local engines can publish status by
-writing zero_status.json in this same directory.
-
-Gmail details are read only from the local zero_gmail_cache.json cache.
-Message snippets are returned only when the caller explicitly requests
-``details=1``.
+Este bridge queda reservado como servicio de respaldo en el puerto 8766.
+El puerto 8765 pertenece al ZERO Local Core unificado (Whisper + estado + memoria).
+No contiene credenciales.
 """
 
 import json
@@ -20,6 +16,8 @@ from flask_cors import CORS
 
 BASE_DIR = Path(__file__).resolve().parent
 STATUS_FILE = Path(os.getenv("ZERO_STATUS_FILE", BASE_DIR / "zero_status.json"))
+HOST = os.getenv("ZERO_BRIDGE_HOST", "127.0.0.1")
+PORT = int(os.getenv("ZERO_BRIDGE_PORT", "8766"))
 
 _default_gmail_cache = BASE_DIR / "zero_gmail_cache.json"
 if not _default_gmail_cache.exists():
@@ -116,6 +114,7 @@ def health():
             "service": "zero-local-bridge",
             "time": _now(),
             "gmail_cache": GMAIL_CACHE_FILE.exists(),
+            "port": PORT,
         }
     )
 
@@ -159,7 +158,8 @@ def gmail_messages():
 
 
 if __name__ == "__main__":
-    print("ZERO local bridge listo: http://127.0.0.1:8765/status")
+    print(f"ZERO fallback bridge listo: http://{HOST}:{PORT}/status")
+    print("ZERO Local Core usa el puerto 8765; este bridge no lo ocupa.")
     print(f"Telemetria: {STATUS_FILE}")
     print(f"Cache Gmail: {GMAIL_CACHE_FILE}")
-    app.run(host="127.0.0.1", port=8765, debug=False, threaded=True)
+    app.run(host=HOST, port=PORT, debug=False, threaded=True)
