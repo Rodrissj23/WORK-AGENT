@@ -1,4 +1,4 @@
-// ZERO access-registry v1.10
+// ZERO access-registry v1.11
 // Registro de accesos por voz con URLs estables de trabajo.
 (function(){
   const ACCESS={
@@ -103,7 +103,7 @@
   }
 
   window.ZERO_ACCESS={
-    version:'1.10',
+    version:'1.11',
     registry:ACCESS,
     match:matchAccess,
     exact:exactAccess,
@@ -123,11 +123,13 @@
 
   loadScript('gmail-ui-sync.js?v=20260813-1920');
 
-  // Capas tardías que dependen del stack completo. Diagnóstico queda en zero-diagnostics.js estático.
+  // Capas tardías: cognición -> prioridad Gmail -> detalle Gmail -> respaldo de voz.
   window.addEventListener('load',()=>{
     const loadSafety=()=>{
       loadScript('gmail-priority.js?v=20260813-1900',()=>{
-        loadScript('voice-fallback.js?v=20260813-1831');
+        loadScript('gmail-conversation-top.js?v=20260813-1945',()=>{
+          loadScript('voice-fallback.js?v=20260813-1831');
+        });
       });
     };
     if(!window.ZERO_CONVERSATION_V2){
