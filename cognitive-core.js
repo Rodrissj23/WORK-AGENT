@@ -4,7 +4,7 @@
 (function(){
   'use strict';
 
-  const VERSION='0.3.0';
+  const VERSION='0.3.1';
   const MEMORY_KEY='zero:cognitive-memory:v1';
   const MAX_TURNS=24;
   const MAX_CONTEXT=8;
@@ -30,8 +30,8 @@
   function classify(raw){const q=normalize(raw),candidates=[];
     if(/\b(como estamos|briefing|estado general|resumen operativo|que tengo pendiente|mis pendientes)\b/.test(q))candidates.push({intent:'briefing',confidence:.98});
     const access=accessIntent(q);if(access)candidates.push(access);const mini=miniIntent(q);if(mini)candidates.push(mini);
-    if(/\b(mora|deuda|impagas|cobranzas)\b/.test(q))candidates.push({intent:'mora',confidence:q.includes('mora')?.95:.72});
-    if(/\b(scoring|reporte por broker|reporte diario)\b/.test(q))candidates.push({intent:'scoring',confidence:q.includes('scoring')?.95:.78});
+    if(/\b(mora|deuda|impagas|cobranzas)\b/.test(q))candidates.push({intent:'mora',confidence:q.includes('mora') ? .95 : .72});
+    if(/\b(scoring|reporte por broker|reporte diario)\b/.test(q))candidates.push({intent:'scoring',confidence:q.includes('scoring') ? .95 : .78});
     if(/\b(mi liquidacion|miliquidacion|miliquiacion|mis comisiones|mi comision|comisiones)\b/.test(q))candidates.push({intent:'mi_liquidacion',confidence:.94});
     if(/\b(control de liquidaciones|control liquidacion|cruzar altas)\b/.test(q))candidates.push({intent:'control_liquidaciones',confidence:.93});
     candidates.sort((a,b)=>b.confidence-a.confidence);if(!candidates.length)return {intent:'unknown',confidence:.18,ambiguous:true,candidates:[]};const best=candidates[0],second=candidates[1],ambiguous=!!second&&(best.confidence-second.confidence)<.08;return {...best,ambiguous,candidates:candidates.slice(0,3)}
