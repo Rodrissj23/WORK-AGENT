@@ -109,15 +109,15 @@ async function waFinishProRecording(){
       return;
     }
 
-    const form = new FormData();
-    form.append('audio', blob, mimeType.includes('ogg') ? 'voice.ogg' : 'voice.webm');
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 12000);
 
     const res = await fetch(WA_TRANSCRIPTION_CFG.endpoint, {
       method: 'POST',
-      body: form,
+      headers: {
+        'Content-Type': mimeType
+      },
+      body: blob,
       signal: controller.signal
     });
     clearTimeout(timeout);
