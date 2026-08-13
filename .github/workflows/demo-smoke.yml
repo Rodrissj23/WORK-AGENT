@@ -1,0 +1,57 @@
+name: ZERO smoke checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  javascript-syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find . -maxdepth 1 -type f -name '*.js' -print | sort)
+          echo "Checking ${#files[@]} JavaScript files"
+          for file in "${files[@]}"; do
+            echo "node --check $file"
+            node --check "$file"
+          done
+
+      - name: Verify demo-critical files
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            index.html
+            app.js
+            access-registry.js
+            cognitive-conversation-v2.js
+            demo-readiness.js
+            zero-diagnostics.js
+            zero-action-guard.js
+            gmail-ui-sync.js
+            gmail-priority.js
+            gmail-conversation-top.js
+            transcription-local.js
+          )
+          for file in "${required[@]}"; do
+            test -f "$file" || { echo "Missing $file"; exit 1; }
+          done
+          echo "Demo-critical files present"
