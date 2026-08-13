@@ -1,4 +1,4 @@
-// ZERO access-registry v1.7
+// ZERO access-registry v1.8
 // Registro de accesos por voz con URLs estables de trabajo.
 (function(){
   const ACCESS={
@@ -103,7 +103,7 @@
   }
 
   window.ZERO_ACCESS={
-    version:'1.7',
+    version:'1.8',
     registry:ACCESS,
     match:matchAccess,
     exact:exactAccess,
@@ -123,11 +123,13 @@
 
   loadScript('gmail-ui-sync.js?v=20260813-1811');
 
-  // Orden estable para demo: cognicion -> fallback de voz -> diagnostico.
+  // Orden estable para demo: cognicion -> Gmail metadata -> fallback voz -> diagnostico.
   window.addEventListener('load',()=>{
     const loadSafety=()=>{
-      loadScript('voice-fallback.js?v=20260813-1831',()=>{
-        loadScript('demo-diagnostics.js?v=20260813-1845');
+      loadScript('gmail-priority.js?v=20260813-1900',()=>{
+        loadScript('voice-fallback.js?v=20260813-1831',()=>{
+          loadScript('demo-diagnostics.js?v=20260813-1845');
+        });
       });
     };
     if(!window.ZERO_CONVERSATION_V2){
