@@ -1,4 +1,4 @@
-// ZERO capabilities v1.1
+// ZERO capabilities v1.2
 (function(){
   'use strict';
   const previous=window.runCommand||(typeof runCommand!=='undefined'?runCommand:null);
@@ -32,12 +32,20 @@
     window.ZERO_LAST_DIAGNOSTIC={at:Date.now(),checks,systems};
   }
 
+  function demoMode(){
+    try{window.ZERO_CONVERSATION_V2?.clear?.()}catch(e){}
+    try{localStorage.removeItem('zero:demo:context')}catch(e){}
+    try{if('speechSynthesis'in window)window.speechSynthesis.cancel()}catch(e){}
+    say('Modo demo listo. Limpié el contexto de esta sesión y dejé intacta la memoria persistente.');
+  }
+
   if(previous){window.runCommand=runCommand=function(value=null,fromVoice=false){
     const raw=String(value!==null?value:(typeof commandInput!=='undefined'?commandInput.value:'')).trim();
     const q=norm(raw);
     if(/\b(que podes hacer|que sabes hacer|para que servis|que puede hacer zero|capacidades|funciones de zero)\b/.test(q)){answer();return}
     if(/^(diagnostico|diagnostico zero|estado de zero|chequeo de zero|todo listo|que funciona)$/.test(q)){diagnostic();return}
+    if(/^(modo demo|iniciar demo|preparar demo|reiniciar contexto)$/.test(q)){demoMode();return}
     return previous(value,fromVoice)
   }}
-  window.ZERO_CAPABILITIES={say:answer,diagnostic};
+  window.ZERO_CAPABILITIES={say:answer,diagnostic,demoMode};
 })();
