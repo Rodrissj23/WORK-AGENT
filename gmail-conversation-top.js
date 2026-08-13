@@ -1,5 +1,5 @@
-// ZERO Gmail Detail Conversation v1.1
-// Se carga por encima de la cognicion y prepara un guard de voz para la demo.
+// ZERO Gmail Detail Conversation v1.2
+// Se carga por encima de la cognicion y prepara guardas de voz para la demo.
 (function(){
   'use strict';
   const API='http://127.0.0.1:8765/gmail/messages';
@@ -70,18 +70,21 @@
     return previous(value,fromVoice);
   }}
 
-  // Guard mínimo: no aceptar un bridge de status como si fuera Whisper.
+  async function realVoiceCore(){
+    const c=new AbortController(),timer=setTimeout(()=>c.abort(),900);
+    try{
+      const r=await fetch('http://127.0.0.1:8765/health',{signal:c.signal,cache:'no-store'});
+      if(!r.ok)return false;
+      const d=await r.json();
+      return !!d?.ok&&(d?.core==='zero-local-core'||/faster-whisper|whisper/i.test(String(d?.engine||'')));
+    }catch(e){return false}
+    finally{clearTimeout(timer)}
+  }
+
   const originalVoiceStart=window.WA_VOICE_PRO?.start?.bind(window.WA_VOICE_PRO);
   if(originalVoiceStart){
     window.WA_VOICE_PRO.start=async function(){
-      const c=new AbortController(),timer=setTimeout(()=>c.abort(),900);
-      try{
-        const r=await fetch('http://127.0.0.1:8765/health',{signal:c.signal,cache:'no-store'});
-        const d=r.ok?await r.json():null;
-        const real=!!d?.ok&&(d?.core==='zero-local-core'||/faster-whisper|whisper/i.test(String(d?.engine||'')));
-        if(real)return originalVoiceStart();
-      }catch(e){}
-      finally{clearTimeout(timer)}
+      if(await realVoiceCore())return originalVoiceStart();
       const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
       if(!SR){say('El núcleo local de Whisper no está disponible y Chrome no ofrece voz de respaldo.');return}
       const rec=new SR();rec.lang='es-AR';rec.interimResults=false;rec.continuous=false;
@@ -91,5 +94,16 @@
     };
   }
 
-  window.ZERO_GMAIL_DETAIL={version:'1.1.0',countFrom,latestFrom,readSelected,subject,selected:()=>selected};
+  const originalHandsfree=window.WA_HANDSFREE?.toggle?.bind(window.WA_HANDSFREE);
+  if(originalHandsfree){
+    const safeHandsfree=async function(){
+      if(await realVoiceCore())return originalHandsfree();
+      say('Manos libres necesita el ZERO Local Core con Whisper. Podés usar Hablar con la voz de respaldo de Chrome.');
+    };
+    window.WA_HANDSFREE.toggle=safeHandsfree;
+    const hf=document.querySelector('#handsfree-toggle');
+    if(hf)hf.onclick=e=>{e.preventDefault();safeHandsfree()};
+  }
+
+  window.ZERO_GMAIL_DETAIL={version:'1.2.0',countFrom,latestFrom,readSelected,subject,realVoiceCore,selected:()=>selected};
 })();
