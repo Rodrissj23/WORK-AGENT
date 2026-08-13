@@ -1,4 +1,4 @@
-// ZERO access-registry v1.9
+// ZERO access-registry v1.10
 // Registro de accesos por voz con URLs estables de trabajo.
 (function(){
   const ACCESS={
@@ -103,7 +103,7 @@
   }
 
   window.ZERO_ACCESS={
-    version:'1.9',
+    version:'1.10',
     registry:ACCESS,
     match:matchAccess,
     exact:exactAccess,
@@ -121,7 +121,7 @@
     }catch(e){if(onDone)onDone()}
   }
 
-  loadScript('gmail-ui-sync.js?v=20260813-1811');
+  loadScript('gmail-ui-sync.js?v=20260813-1920');
 
   // Capas tardías que dependen del stack completo. Diagnóstico queda en zero-diagnostics.js estático.
   window.addEventListener('load',()=>{
