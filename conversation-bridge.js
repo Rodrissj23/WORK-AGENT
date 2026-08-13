@@ -1,15 +1,14 @@
-// Work Agent conversation bridge v1
-// Unifica la ventana conversacional entre voice-brain y manos libres.
+// Work Agent conversation bridge v2
+// Ventana conversacional unica + contexto Mini Hub independiente.
 
 (function(){
   const FOLLOW_MS = 10000;
   let activeUntil = 0;
+  let lastMini = null;
 
   function arm(){
     activeUntil = Date.now() + FOLLOW_MS;
-    try{
-      if(typeof waHandsFreeArmedUntil !== 'undefined') waHandsFreeArmedUntil = activeUntil;
-    }catch(e){}
+    try{ if(typeof waHandsFreeArmedUntil !== 'undefined') waHandsFreeArmedUntil = activeUntil; }catch(e){}
     try{
       if(typeof waConversation !== 'undefined' && waConversation){
         waConversation.followUpUntil = activeUntil;
@@ -19,30 +18,109 @@
     return activeUntil;
   }
 
-  function active(){
-    return Date.now() < activeUntil;
+  function active(){ return Date.now() < activeUntil; }
+
+  function norm(text){
+    return String(text||'')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g,'')
+      .replace(/[¿?¡!.,;:]/g,' ')
+      .replace(/\s+/g,' ')
+      .trim();
   }
 
-  window.WA_CONVERSATION = { arm, active, ms: FOLLOW_MS };
+  function spokenNum(text){
+    try{
+      if(typeof spokenNumbersToDigits === 'function') return spokenNumbersToDigits(text);
+    }catch(e){}
+    return text;
+  }
 
-  // Si existe la función del manos libres, la hacemos usar esta ventana común.
+  function explicitEntities(text){
+    let q = norm(spokenNum(text));
+    let sex = null, age = null, unit = null;
+    if(/\b(mujer|nena|nina|femenina|femenino)\b/.test(q)) sex='m';
+    if(/\b(varon|hombre|nene|nino|masculino|masculina)\b/.test(q)) sex='v';
+    if(/\bmes(es)?\b/.test(q)) unit='meses';
+    if(/\b(ano|anos)\b/.test(q)) unit='anios';
+    const m=q.match(/\b(\d{1,2})\b/);
+    if(m) age=Number(m[1]);
+    return {sex,age,unit};
+  }
+
+  function canonicalFollowUp(text){
+    if(!lastMini) return null;
+    const e=explicitEntities(text);
+    if(!e.sex && e.age===null && !e.unit) return null;
+
+    const merged={
+      sex:e.sex || lastMini.sex,
+      age:e.age!==null ? e.age : lastMini.age,
+      unit:e.unit || lastMini.unit
+    };
+
+    if(!merged.sex || merged.age===null) return null;
+    if(merged.unit==='meses' && (merged.age<1 || merged.age>11)) return null;
+    if(merged.unit==='anios' && (merged.age<1 || merged.age>18)) return null;
+
+    const sexTxt=merged.sex==='m'?'mujer':'varon';
+    const unitTxt=merged.unit==='meses'?'meses':'anos';
+    return { text:`${sexTxt} ${merged.age} ${unitTxt}`, mini:merged };
+  }
+
+  window.WA_CONVERSATION = {
+    arm,
+    active,
+    ms:FOLLOW_MS,
+    lastMini:()=>lastMini?{...lastMini}:null
+  };
+
+  // Capturamos TODA respuesta Mini Hub valida y la usamos como fuente de verdad.
+  if(typeof answerMiniHub === 'function'){
+    const originalAnswerMiniHub=answerMiniHub;
+    answerMiniHub=function(mini){
+      if(mini && mini.sex && mini.age!==null && mini.unit){
+        lastMini={sex:mini.sex,age:mini.age,unit:mini.unit};
+        arm();
+      }
+      return originalAnswerMiniHub(mini);
+    };
+  }
+
   if(typeof waConversationActive === 'function'){
-    waConversationActive = function(){ return active(); };
+    waConversationActive=function(){ return active(); };
   }
 
   if(typeof waArmConversation === 'function'){
-    waArmConversation = function(){
+    waArmConversation=function(){
       arm();
       try{waFollowUpPending=false}catch(e){}
       return activeUntil;
     };
   }
 
-  // Armamos la conversación cada vez que se ejecuta un comando válido por voz.
-  const originalRun = window.runCommand || (typeof runCommand !== 'undefined' ? runCommand : null);
+  // Cada comando por voz renueva la ventana.
+  const originalRun=window.runCommand || (typeof runCommand!=='undefined'?runCommand:null);
   if(originalRun){
-    window.runCommand = runCommand = function(value=null, fromVoice=false){
-      const result = originalRun(value, fromVoice);
+    window.runCommand=runCommand=function(value=null,fromVoice=false){
+      let finalValue=value;
+
+      // Si estamos conversando y falta alguna entidad, completamos desde lastMini.
+      if(fromVoice && active() && lastMini){
+        const raw=String(value!==null?value:(typeof commandInput!=='undefined'?commandInput.value:'')).trim();
+        const resolved=canonicalFollowUp(raw);
+        if(resolved){
+          finalValue=resolved.text;
+          try{commandInput.value=raw}catch(e){}
+          try{
+            commandFeedback.textContent=`Continuación: “${raw}” → ${resolved.text}`;
+            commandFeedback.classList.remove('error');
+          }catch(e){}
+        }
+      }
+
+      const result=originalRun(finalValue,fromVoice);
       if(fromVoice){
         arm();
         setTimeout(()=>{
@@ -57,22 +135,19 @@
     };
   }
 
-  // La función de manos libres se evalúa al llegar cada transcripción.
+  // Follow-up sin wake word dentro de la ventana.
   if(typeof waHandleHandsFreeText === 'function'){
-    const originalHandle = waHandleHandsFreeText;
-    waHandleHandsFreeText = async function(text){
-      // Sin wake word pero dentro de la ventana => follow-up directo.
+    const originalHandle=waHandleHandsFreeText;
+    waHandleHandsFreeText=async function(text){
       if(active()){
-        const clean = typeof waCorrectStt==='function' ? waCorrectStt(text) : String(text||'').trim();
+        const clean=typeof waCorrectStt==='function'?waCorrectStt(text):String(text||'').trim();
         if(clean){
           try{commandInput.value=clean}catch(e){}
-          try{commandFeedback.textContent=`Continuación: “${clean}”`;commandFeedback.classList.remove('error')}catch(e){}
           arm();
           return runCommand(clean,true);
         }
       }
-      const result = await originalHandle(text);
-      return result;
+      return await originalHandle(text);
     };
   }
 })();
