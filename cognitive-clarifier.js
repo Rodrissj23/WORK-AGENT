@@ -1,10 +1,11 @@
-// ZERO Cognitive Clarifier v0.1
-// Capa descriptiva para detectar ambigüedad y formular preguntas concretas.
+// ZERO Cognitive Clarifier v0.2
+// Detecta ambigüedad y formula preguntas concretas sobre planes simulados.
+// Respeta referencias que el planner ya pudo resolver de forma segura.
 // No ejecuta herramientas ni modifica datos.
 (function(){
   'use strict';
 
-  const VERSION='0.1.0';
+  const VERSION='0.2.0';
 
   function normalize(value){
     return String(value||'')
@@ -44,7 +45,13 @@
   function questionForStep(step){
     if(!step)return null;
 
-    const cue=referenceCue(step.text);
+    // Si el planner resolvió explícitamente la referencia usando un acceso conocido
+    // anterior, no volvemos a preguntar por ella.
+    if(step.resolvedReference && step.tool && step.policy?.reason!=='missing_parameters'){
+      return null;
+    }
+
+    const cue=referenceCue(step.originalText||step.text);
     if((!step.ok||!step.tool) && cue){
       return {
         step:step.index,
@@ -76,7 +83,7 @@
       return {
         step:step.index,
         reason:'unresolved_step',
-        question:`No pude resolver el paso ${step.index}: “${step.text}”. ¿Qué querés que haga con eso?`
+        question:`No pude resolver el paso ${step.index}: “${step.originalText||step.text}”. ¿Qué querés que haga con eso?`
       };
     }
 
@@ -90,7 +97,14 @@
       ok:true,
       needsClarification:clarifications.length>0,
       first:clarifications[0]||null,
-      clarifications
+      clarifications,
+      resolvedReferences:(planResult.steps||[]).filter(x=>x.resolvedReference).map(x=>({
+        step:x.index,
+        cue:x.resolvedReference.cue,
+        fromStep:x.resolvedReference.fromStep,
+        target:x.resolvedReference.target,
+        confidence:x.resolvedReference.confidence
+      }))
     };
   }
 
@@ -104,6 +118,10 @@
     const result=inspect(raw);
     if(!result.ok)return 'No pude revisar ese plan todavía.';
     if(result.first)return `${result.first.question} No ejecuté nada.`;
+    if(result.resolvedReferences.length){
+      const refs=result.resolvedReferences.map(r=>`paso ${r.step} desde el paso ${r.fromStep}`).join(', ');
+      return `El plan no necesita una aclaración básica. Pude resolver contexto interno en ${refs}. Sigue en modo simulación y no ejecuté nada.`;
+    }
     return 'El plan no necesita una aclaración básica. Sigue en modo simulación y no ejecuté nada.';
   }
 
