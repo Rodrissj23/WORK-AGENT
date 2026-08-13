@@ -1,4 +1,4 @@
-// ZERO access-registry v1.2
+// ZERO access-registry v1.3
 // Registro de accesos por voz con URLs estables de trabajo.
 (function(){
   const ACCESS={
@@ -59,8 +59,15 @@
     return best;
   }
 
-  function openAccess(raw){
-    const hit=matchAccess(raw);
+  function exactAccess(raw){
+    const q=normalize(raw);
+    for(const [id,a] of Object.entries(ACCESS)){
+      if(a.aliases.some(alias=>normalize(alias)===q))return{id,entry:a};
+    }
+    return null;
+  }
+
+  function openEntry(hit){
     if(!hit)return false;
     const a=hit.entry;
     if(!a.url){
@@ -78,20 +85,28 @@
     return true;
   }
 
+  function openAccess(raw){return openEntry(matchAccess(raw))}
+
   const previousRun=window.runCommand || (typeof runCommand!=='undefined'?runCommand:null);
   if(previousRun){
     window.runCommand=runCommand=function(value=null,fromVoice=false){
       const raw=String(value!==null?value:(typeof commandInput!=='undefined'?commandInput.value:'')).trim();
-      const q=normalize(raw).replace(/^(zero\s+)?(abri|abrir|abre|abrime|abreme|quiero abrir|vamos a|llevame a)\s+/,'');
-      if(openAccess(q))return;
+      const normalized=normalize(raw);
+      const openPattern=/^(zero\s+)?(abri|abrir|abre|abrime|abreme|quiero abrir|llevame a)\s+/;
+      const explicitOpen=openPattern.test(normalized);
+      const q=normalized.replace(openPattern,'');
+      if(explicitOpen&&openAccess(q))return;
+      const exact=exactAccess(q);
+      if(exact&&openEntry(exact))return;
       return previousRun(value,fromVoice);
     };
   }
 
   window.ZERO_ACCESS={
-    version:'1.2',
+    version:'1.3',
     registry:ACCESS,
     match:matchAccess,
+    exact:exactAccess,
     open:openAccess,
     setUrl(id,url){if(ACCESS[id])ACCESS[id].url=String(url||'').trim();}
   };
