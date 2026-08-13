@@ -1,5 +1,5 @@
-// ZERO Gmail Detail Conversation v1.0
-// Se carga por encima de la cognicion para consultas concretas del cache local.
+// ZERO Gmail Detail Conversation v1.1
+// Se carga por encima de la cognicion y prepara un guard de voz para la demo.
 (function(){
   'use strict';
   const API='http://127.0.0.1:8765/gmail/messages';
@@ -70,5 +70,26 @@
     return previous(value,fromVoice);
   }}
 
-  window.ZERO_GMAIL_DETAIL={version:'1.0.0',countFrom,latestFrom,readSelected,subject,selected:()=>selected};
+  // Guard mínimo: no aceptar un bridge de status como si fuera Whisper.
+  const originalVoiceStart=window.WA_VOICE_PRO?.start?.bind(window.WA_VOICE_PRO);
+  if(originalVoiceStart){
+    window.WA_VOICE_PRO.start=async function(){
+      const c=new AbortController(),timer=setTimeout(()=>c.abort(),900);
+      try{
+        const r=await fetch('http://127.0.0.1:8765/health',{signal:c.signal,cache:'no-store'});
+        const d=r.ok?await r.json():null;
+        const real=!!d?.ok&&(d?.core==='zero-local-core'||/faster-whisper|whisper/i.test(String(d?.engine||'')));
+        if(real)return originalVoiceStart();
+      }catch(e){}
+      finally{clearTimeout(timer)}
+      const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+      if(!SR){say('El núcleo local de Whisper no está disponible y Chrome no ofrece voz de respaldo.');return}
+      const rec=new SR();rec.lang='es-AR';rec.interimResults=false;rec.continuous=false;
+      rec.onresult=e=>{const text=String(e.results?.[0]?.[0]?.transcript||'').trim();if(text){try{commandInput.value=text}catch(err){};try{runCommand(text,true)}catch(err){}}};
+      rec.onerror=()=>say('No pude entenderte con la voz de respaldo.');
+      try{rec.start()}catch(e){}
+    };
+  }
+
+  window.ZERO_GMAIL_DETAIL={version:'1.1.0',countFrom,latestFrom,readSelected,subject,selected:()=>selected};
 })();
