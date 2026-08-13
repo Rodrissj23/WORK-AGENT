@@ -1,10 +1,14 @@
-// ZERO Cognitive Router v0.1
+// ZERO Cognitive Router v0.2
 // Arbitra contextos conversacionales. No ejecuta planes.
+// Prioridad: briefing inicial -> aclaracion pendiente -> comando nuevo/delegacion estable.
 (function(){
   'use strict';
-  const VERSION='0.1.0';
+  const VERSION='0.2.0';
 
   function text(v){return String(v||'').replace(/\s+/g,' ').trim();}
+  function normalized(v){
+    return text(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[¿?¡!.,;:]/g,' ').replace(/\s+/g,' ').trim();
+  }
   function speakBack(message){
     try{commandFeedback.textContent=message;commandFeedback.classList.remove('error')}catch(e){}
     try{if(typeof speak==='function')speak(message)}catch(e){}
@@ -18,6 +22,20 @@
   }
   function clarificationActive(){
     try{return !!window.ZERO_CLARIFIER?.session?.active?.()}catch(e){return false;}
+  }
+  function looksLikeNewCommand(raw){
+    const q=normalized(raw);
+    if(!q)return false;
+    if(/^zero\b/.test(q))return true;
+    try{
+      const analysis=window.ZERO_BRAIN?.classify?.(raw);
+      if(!analysis||analysis.intent==='unknown'||analysis.confidence<.9)return false;
+      if(analysis.intent==='mini_hub'){
+        const e=analysis.entities||{};
+        return !!(e.sex&&e.age!==null);
+      }
+      return true;
+    }catch(e){return false;}
   }
   function answerClarification(raw){
     const result=window.ZERO_CLARIFIER?.session?.answer?.(raw);
@@ -52,12 +70,26 @@
   if(previousRun){
     window.runCommand=runCommand=function(value=null,fromVoice=false){
       const raw=text(value!==null?value:(typeof commandInput!=='undefined'?commandInput.value:''));
-      if(startupWaiting(fromVoice))return previousRun(value,fromVoice);
-      if(clarificationActive()&&answerClarification(raw))return;
+
+      if(startupWaiting(fromVoice)){
+        remember('delegated_to_startup',{text:raw});
+        return previousRun(value,fromVoice);
+      }
+
+      if(clarificationActive()){
+        if(looksLikeNewCommand(raw)){
+          try{window.ZERO_CLARIFIER?.session?.clear?.('superseded_by_new_command')}catch(e){}
+          remember('clarification_superseded',{text:raw});
+          return previousRun(value,fromVoice);
+        }
+        if(answerClarification(raw))return;
+      }
+
       if(maybeAsk(raw))return;
+      remember('delegated_to_command_stack',{text:raw,source:fromVoice?'voice':'text'});
       return previousRun(value,fromVoice);
     };
   }
 
-  window.ZERO_ROUTER={version:VERSION,startupWaiting,clarificationActive};
+  window.ZERO_ROUTER={version:VERSION,startupWaiting,clarificationActive,looksLikeNewCommand};
 })();
