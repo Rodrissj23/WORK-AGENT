@@ -1,4 +1,4 @@
-// ZERO access-registry v1.4
+// ZERO access-registry v1.5
 // Registro de accesos por voz con URLs estables de trabajo.
 (function(){
   const ACCESS={
@@ -103,7 +103,7 @@
   }
 
   window.ZERO_ACCESS={
-    version:'1.4',
+    version:'1.5',
     registry:ACCESS,
     match:matchAccess,
     exact:exactAccess,
@@ -111,11 +111,22 @@
     setUrl(id,url){if(ACCESS[id])ACCESS[id].url=String(url||'').trim();}
   };
 
-  // Complemento visual de Gmail: se carga separado para no tocar el stack estable.
+  // Complemento visual de Gmail.
   try{
     const script=document.createElement('script');
     script.src='gmail-ui-sync.js?v=20260813-1811';
     script.async=true;
     document.head.appendChild(script);
   }catch(e){}
+
+  // La cognición conversacional se carga al final para envolver la pila estable.
+  window.addEventListener('load',()=>{
+    try{
+      if(window.ZERO_CONVERSATION_V2)return;
+      const script=document.createElement('script');
+      script.src='cognitive-conversation-v2.js?v=20260813-1828';
+      script.async=true;
+      document.head.appendChild(script);
+    }catch(e){}
+  },{once:true});
 })();
