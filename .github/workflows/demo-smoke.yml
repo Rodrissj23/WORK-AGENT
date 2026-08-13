@@ -46,6 +46,7 @@ jobs:
             demo-readiness.js
             zero-diagnostics.js
             zero-action-guard.js
+            voice-core-guard.js
             gmail-ui-sync.js
             gmail-priority.js
             gmail-conversation-top.js
@@ -70,3 +71,20 @@ jobs:
                 test -f "$file" || { echo "index.html references missing script: $file"; exit 1; }
                 echo "OK $file"
               done
+
+      - name: Verify critical runtime layers are wired
+        shell: bash
+        run: |
+          set -euo pipefail
+          critical=(
+            voice-core-guard.js
+            cognitive-conversation-v2.js
+            zero-action-guard.js
+          )
+          for file in "${critical[@]}"; do
+            grep -Eq "<script[^>]+src=\"${file}(\?[^\"]*)?\"" index.html || {
+              echo "Critical runtime layer is not loaded by index.html: $file"
+              exit 1
+            }
+            echo "WIRED $file"
+          done
