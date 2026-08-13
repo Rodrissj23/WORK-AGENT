@@ -1,4 +1,4 @@
-// ZERO access-registry v1.11
+// ZERO access-registry v1.12
 // Registro de accesos por voz con URLs estables de trabajo.
 (function(){
   const ACCESS={
@@ -103,7 +103,7 @@
   }
 
   window.ZERO_ACCESS={
-    version:'1.11',
+    version:'1.12',
     registry:ACCESS,
     match:matchAccess,
     exact:exactAccess,
@@ -121,19 +121,19 @@
     }catch(e){if(onDone)onDone()}
   }
 
-  loadScript('gmail-ui-sync.js?v=20260813-1920');
+  loadScript('gmail-ui-sync.js?v=20260813-2010');
 
   // Capas tardías: cognición -> prioridad Gmail -> detalle Gmail -> respaldo de voz.
   window.addEventListener('load',()=>{
     const loadSafety=()=>{
-      loadScript('gmail-priority.js?v=20260813-1900',()=>{
-        loadScript('gmail-conversation-top.js?v=20260813-1945',()=>{
+      loadScript('gmail-priority.js?v=20260813-2010',()=>{
+        loadScript('gmail-conversation-top.js?v=20260813-2010',()=>{
           loadScript('voice-fallback.js?v=20260813-1831');
         });
       });
     };
     if(!window.ZERO_CONVERSATION_V2){
-      loadScript('cognitive-conversation-v2.js?v=20260813-1828',loadSafety);
+      loadScript('cognitive-conversation-v2.js?v=20260813-2010',loadSafety);
     }else{
       loadSafety();
     }
