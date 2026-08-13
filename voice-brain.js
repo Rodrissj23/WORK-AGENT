@@ -1,9 +1,10 @@
-// Work Agent Voice Brain v1.2
-// Parser por entidades + memoria contextual + deduplicacion + seguimiento conversacional.
+// Work Agent Voice Brain v1.3
+// Parser por entidades + contexto + seguimiento conversacional estable.
 
-const WA_CONTEXT_TTL = 3200;
-const WA_DUPLICATE_TTL = 1800;
-const WA_FOLLOWUP_TTL = 6500;
+const WA_CONTEXT_TTL = 3500;
+const WA_DUPLICATE_TTL = 1600;
+const WA_FOLLOWUP_TTL = 8000;
+
 const waVoiceContext = { sex:null, age:null, unit:null, updatedAt:0 };
 const waConversation = { lastMini:null, followUpUntil:0, awaiting:false };
 let waLastCommand = { key:'', at:0 };
@@ -21,18 +22,21 @@ function waContextFresh(){
 }
 
 function waConversationFresh(){
-  return waConversation.lastMini && Date.now()<=waConversation.followUpUntil;
-}
-
-function waStopFollowUp(){
-  waConversation.awaiting=false;
-  waConversation.followUpUntil=0;
-  if(waFollowUpTimer){ clearTimeout(waFollowUpTimer); waFollowUpTimer=null; }
+  return !!waConversation.lastMini && Date.now()<=waConversation.followUpUntil;
 }
 
 function waRememberMini(mini){
   waConversation.lastMini={sex:mini.sex,age:mini.age,unit:mini.unit};
   waConversation.followUpUntil=Date.now()+WA_FOLLOWUP_TTL;
+}
+
+function waStopFollowUp(){
+  waConversation.awaiting=false;
+  waConversation.followUpUntil=0;
+  if(waFollowUpTimer){
+    clearTimeout(waFollowUpTimer);
+    waFollowUpTimer=null;
+  }
 }
 
 function waNormalizeNatural(raw){
@@ -61,15 +65,18 @@ function waExtractEntities(raw){
 
   const ageMatch=q.match(/\b(\d{1,2})\b/);
   if(ageMatch) age=Number(ageMatch[1]);
+
   return {sex,age,unit,raw:q};
 }
 
 function waMergeWithContext(entities){
   if(!waContextFresh()) waResetContext();
+
   if(entities.sex) waVoiceContext.sex=entities.sex;
   if(entities.age!==null) waVoiceContext.age=entities.age;
   if(entities.unit) waVoiceContext.unit=entities.unit;
   if(entities.sex||entities.age!==null||entities.unit) waVoiceContext.updatedAt=Date.now();
+
   return {
     sex:entities.sex||waVoiceContext.sex,
     age:entities.age!==null?entities.age:waVoiceContext.age,
@@ -79,11 +86,13 @@ function waMergeWithContext(entities){
 
 function waResolveFollowUp(raw,entities){
   if(!waConversationFresh()) return null;
+
   const prev=waConversation.lastMini;
-  const q=waNormalizeNatural(raw);
-  const mentionsMiniEntity=!!entities.sex||entities.age!==null||!!entities.unit;
-  const followWords=/\b(otra|otro|misma|mismo|cambia|cambiar|y|ahora)\b/.test(normalizeCommand(raw));
-  if(!mentionsMiniEntity&&!followWords) return null;
+  const hasEntity=!!entities.sex||entities.age!==null||!!entities.unit;
+  const q=normalizeCommand(raw);
+  const followWord=/\b(y|ahora|otro|otra|mismo|misma|cambia|cambiar)\b/.test(q);
+
+  if(!hasEntity&&!followWord) return null;
 
   const merged={
     sex:entities.sex||prev.sex,
@@ -93,15 +102,17 @@ function waResolveFollowUp(raw,entities){
 
   if(merged.unit==='meses'&&(merged.age<1||merged.age>11)) return null;
   if(merged.unit==='anios'&&(merged.age<1||merged.age>18)) return null;
+
   return merged;
 }
 
 function waCommandKey(raw){
   const q=normalizeVoiceCommand(raw);
-  const e=waExtractEntities(raw);
-  const follow=waResolveFollowUp(raw,e);
-  const m=follow||waMergeWithContext(e);
-  if(m.sex&&m.age!==null) return `mini:${m.sex}:${m.age}:${m.unit}`;
+  const entities=waExtractEntities(raw);
+  const follow=waResolveFollowUp(raw,entities);
+  const merged=follow||waMergeWithContext(entities);
+
+  if(merged.sex&&merged.age!==null) return `mini:${merged.sex}:${merged.age}:${merged.unit}`;
   if(q.includes('mora')) return 'mora';
   if(q.includes('scoring')||q.includes('reporte')) return 'scoring';
   if(q.includes('control')&&q.includes('liquid')) return 'control-liquidaciones';
@@ -110,7 +121,8 @@ function waCommandKey(raw){
 }
 
 function waIsDuplicate(raw){
-  const key=waCommandKey(raw),now=Date.now();
+  const key=waCommandKey(raw);
+  const now=Date.now();
   if(key&&waLastCommand.key===key&&(now-waLastCommand.at)<WA_DUPLICATE_TTL) return true;
   waLastCommand={key,at:now};
   return false;
@@ -120,9 +132,11 @@ extractMiniHubQuery=function(raw){
   const entities=waExtractEntities(raw);
   const follow=waResolveFollowUp(raw,entities);
   const merged=follow||waMergeWithContext(entities);
+
   if(!merged.sex||merged.age===null) return null;
   if(merged.unit==='meses'&&(merged.age<1||merged.age>11)) return null;
   if(merged.unit==='anios'&&(merged.age<1||merged.age>18)) return null;
+
   return merged;
 };
 
@@ -131,6 +145,7 @@ isCompleteVoiceCommand=function(raw){
   const entities=waExtractEntities(raw);
   const follow=waResolveFollowUp(raw,entities);
   const merged=follow||waMergeWithContext(entities);
+
   if(merged.sex&&merged.age!==null) return true;
   if(q.includes('mora')) return true;
   if(q.includes('scoring')||q.includes('reporte')) return true;
@@ -139,10 +154,7 @@ isCompleteVoiceCommand=function(raw){
   return false;
 };
 
-function waStartFollowUpListening(){
-  if(typeof recognition==='undefined'||!recognition) return;
-  waConversation.awaiting=true;
-  waConversation.followUpUntil=Date.now()+WA_FOLLOWUP_TTL;
+function waArmFollowUpTimeout(){
   if(waFollowUpTimer) clearTimeout(waFollowUpTimer);
   waFollowUpTimer=setTimeout(()=>{
     waConversation.awaiting=false;
@@ -152,24 +164,41 @@ function waStartFollowUpListening(){
     }
     setVoiceState('ready','Voz lista');
   },WA_FOLLOWUP_TTL);
-
-  setTimeout(()=>{
-    if(isListening) return;
-    try{
-      finalTranscript='';
-      interimTranscript='';
-      manualStop=false;
-      beeped=false;
-      recognition.start();
-    }catch(e){}
-  },120);
 }
 
-function waSpeakAndListen(text){
-  if(!('speechSynthesis' in window)){
-    waStartFollowUpListening();
+function waStartFreshFollowUp(attempt=0){
+  if(typeof recognition==='undefined'||!recognition) return;
+  if(!waConversationFresh()) return;
+
+  if(isListening){
+    if(attempt<8){
+      setTimeout(()=>waStartFreshFollowUp(attempt+1),90);
+    }
     return;
   }
+
+  finalTranscript='';
+  interimTranscript='';
+  manualStop=false;
+  beeped=false;
+  waConversation.awaiting=true;
+  waConversation.followUpUntil=Date.now()+WA_FOLLOWUP_TTL;
+  waArmFollowUpTimeout();
+
+  try{
+    recognition.start();
+    setVoiceState('listening','Seguimos · esperá el pip');
+  }catch(e){
+    if(attempt<8) setTimeout(()=>waStartFreshFollowUp(attempt+1),120);
+  }
+}
+
+function waSpeakAndThenListen(text){
+  if(!('speechSynthesis' in window)){
+    setTimeout(()=>waStartFreshFollowUp(),250);
+    return;
+  }
+
   window.speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
   u.lang=preferredVoice?.lang||'es-AR';
@@ -177,13 +206,11 @@ function waSpeakAndListen(text){
   u.rate=1.04;
   u.pitch=.98;
   u.volume=1;
+
   u.onend=()=>{
-    setTimeout(()=>{
-      listeningBeep();
-      waStartFollowUpListening();
-      setVoiceState('listening','Seguimos · hablá');
-    },90);
+    setTimeout(()=>waStartFreshFollowUp(),250);
   };
+
   window.speechSynthesis.speak(u);
 }
 
@@ -191,8 +218,13 @@ const waOriginalRunCommand=runCommand;
 runCommand=function(value=null,fromVoice=false){
   const raw=String(value!==null?value:commandInput.value).trim();
   const q=normalizeVoiceCommand(raw);
+
   if(value!==null) commandInput.value=raw;
-  if(!q){ feedback('Escribí o decí un comando.',true,'No escuché ningún comando.'); return; }
+  if(!q){
+    feedback('Escribí o decí un comando.',true,'No escuché ningún comando.');
+    return;
+  }
+
   if(fromVoice&&waIsDuplicate(raw)) return;
 
   const entities=waExtractEntities(raw);
@@ -211,8 +243,20 @@ runCommand=function(value=null,fromVoice=false){
 
   const hasMiniEntity=!!entities.sex||entities.age!==null||!!entities.unit;
   if(fromVoice&&hasMiniEntity){
-    if(!merged.sex){ commandFeedback.textContent='Tengo la edad. Decime mujer o varón.'; commandFeedback.classList.remove('error'); return; }
-    if(merged.age===null){ commandFeedback.textContent='Tengo el sexo. Decime la edad.'; commandFeedback.classList.remove('error'); return; }
+    if(!merged.sex){
+      commandFeedback.textContent='Tengo la edad. Decime mujer o varón.';
+      commandFeedback.classList.remove('error');
+      waVoiceContext.updatedAt=Date.now();
+      setTimeout(()=>waStartFreshFollowUp(),120);
+      return;
+    }
+    if(merged.age===null){
+      commandFeedback.textContent='Tengo el sexo. Decime la edad.';
+      commandFeedback.classList.remove('error');
+      waVoiceContext.updatedAt=Date.now();
+      setTimeout(()=>waStartFreshFollowUp(),120);
+      return;
+    }
   }
 
   waStopFollowUp();
@@ -223,44 +267,41 @@ runCommand=function(value=null,fromVoice=false){
 answerMiniHub=function(mini){
   const row=(mini.unit==='meses'?MINI_DATA.meses:MINI_DATA.anios)[mini.age];
   if(!row) return feedback('No tengo datos para esa edad.',true,'No tengo datos para esa edad.');
+
   const [altura,peso]=row[mini.sex];
   const sexo=mini.sex==='m'?'Mujer':'Varón';
   const edadTxt=mini.unit==='meses'?`${mini.age} ${mini.age===1?'mes':'meses'}`:`${mini.age} ${mini.age===1?'año':'años'}`;
+
   commandFeedback.textContent=`${sexo} · ${edadTxt} → ${altura} cm · ${peso} kg`;
   commandFeedback.classList.remove('error');
+
   waRememberMini(mini);
-  waSpeakAndListen(`${altura} centímetros, ${peso} kilos.`);
+  waSpeakAndThenListen(`${altura} centímetros, ${peso} kilos.`);
 };
 
-// Escucha optimizada: completo sale casi instantaneo; incompleto deja margen para continuar.
 if(typeof recognition!=='undefined'&&recognition){
   recognition.onresult=e=>{
     let newFinal='',newInterim='';
+
     for(let i=e.resultIndex;i<e.results.length;i++){
       const text=e.results[i][0].transcript.trim();
       if(e.results[i].isFinal) newFinal+=` ${text}`;
       else newInterim+=` ${text}`;
     }
+
     if(newFinal) finalTranscript=`${finalTranscript} ${newFinal}`.replace(/\s+/g,' ').trim();
     interimTranscript=newInterim.trim();
+
     const heard=fullTranscript();
     if(heard){
       commandInput.value=heard;
       setVoiceState('listening',`Escuchando: “${heard}”`);
-      scheduleFinish(isCompleteVoiceCommand(heard)?45:650);
+      scheduleFinish(isCompleteVoiceCommand(heard)?55:520);
     }
   };
 
   recognition.onspeechend=()=>{
     const heard=fullTranscript();
-    scheduleFinish(isCompleteVoiceCommand(heard)?40:550);
-  };
-
-  const waBaseOnEnd=recognition.onend;
-  recognition.onend=()=>{
-    if(waBaseOnEnd) waBaseOnEnd();
-    if(waConversation.awaiting&&waConversationFresh()&&!manualStop&&fullTranscript()===''){
-      setTimeout(()=>waStartFollowUpListening(),120);
-    }
+    scheduleFinish(isCompleteVoiceCommand(heard)?45:450);
   };
 }
