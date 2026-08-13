@@ -1,6 +1,6 @@
-// Work Agent - Local Whisper Voice Engine v2.1
+// Work Agent - Local Whisper Voice Engine v2.2
 // Mic local -> deteccion de voz/silencio -> faster-whisper local.
-// Fix: evita escucharse a si mismo y bloquea grabaciones concurrentes.
+// Fix: control propio de TTS para evitar bloqueos de speechSynthesis en Chrome/Linux.
 
 const WA_LOCAL_VOICE={
   endpoint:'http://127.0.0.1:8765/transcribe',
@@ -30,9 +30,35 @@ let waSpeechStartedAt=0;
 let waLastVoiceAt=0;
 let waProcessing=false;
 let waBlockedUntil=0;
+let waTtsActive=false;
 
 function waWaitingLabel(){
   return `Manos libres · esperando “${WA_LOCAL_VOICE.wakeWord}”`;
+}
+
+function waInstallTtsGuard(){
+  if(!window.speechSynthesis||window.__WA_TTS_GUARD_INSTALLED)return;
+  window.__WA_TTS_GUARD_INSTALLED=true;
+  const nativeSpeak=window.speechSynthesis.speak.bind(window.speechSynthesis);
+  window.speechSynthesis.speak=function(utterance){
+    waTtsActive=true;
+    const release=()=>{
+      waTtsActive=false;
+      waBlockedUntil=Date.now()+650;
+      if(waHandsFree&&!waProcessing&&!waLocalRecording){
+        setTimeout(()=>{
+          if(waHandsFree&&!waProcessing&&!waLocalRecording&&!waTtsActive){
+            setVoiceState('ready',waWaitingLabel());
+          }
+        },680);
+      }
+    };
+    try{
+      utterance.addEventListener('end',release,{once:true});
+      utterance.addEventListener('error',release,{once:true});
+    }catch(e){}
+    return nativeSpeak(utterance);
+  };
 }
 
 function waLocalDisableLegacy(){
@@ -90,8 +116,7 @@ async function waLocalPopulateSelector(){
 }
 
 function waLocalMime(){
-  return ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus']
-    .find(t=>MediaRecorder.isTypeSupported(t))||'';
+  return ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'].find(t=>MediaRecorder.isTypeSupported(t))||'';
 }
 
 async function waLocalHealth(){
@@ -156,13 +181,8 @@ function waCreateAnalyser(stream){
   waAudioContext.createMediaStreamSource(stream).connect(waAnalyser);
 }
 
-function waAssistantIsSpeaking(){
-  try{return !!(window.speechSynthesis&&(window.speechSynthesis.speaking||window.speechSynthesis.pending))}
-  catch(e){return false}
-}
-
 function waBeginRecording(manual=false){
-  if(waLocalRecording||waProcessing||!waLocalStream)return;
+  if(waLocalRecording||waProcessing||waTtsActive||!waLocalStream)return;
   const mime=waLocalMime();
   waLocalChunks=[];
   waManualMode=manual;
@@ -182,8 +202,7 @@ function waLocalStop(){
   waLocalRecording=false;
   waProcessing=true;
   if(waLocalTimer){clearTimeout(waLocalTimer);waLocalTimer=null}
-  if(waManualMode)setVoiceState('ready','Transcribiendo local…');
-  else setVoiceState('ready','Jarvis · procesando…');
+  setVoiceState('ready',waManualMode?'Transcribiendo local…':'Jarvis · procesando…');
   try{if(waLocalRecorder?.state!=='inactive')waLocalRecorder.stop()}
   catch(e){waProcessing=false}
 }
@@ -192,16 +211,7 @@ function waMonitorLoop(){
   if(!waAnalyser)return;
   const now=Date.now();
 
-  // Mientras Jarvis habla, no se escucha a si mismo. Dejamos un pequeno
-  // margen despues de la voz sintetizada para evitar eco residual.
-  if(waAssistantIsSpeaking()){
-    waBlockedUntil=now+650;
-    waLastVoiceAt=now;
-    waMonitorRAF=requestAnimationFrame(waMonitorLoop);
-    return;
-  }
-
-  if(now<waBlockedUntil||waProcessing){
+  if(waTtsActive||now<waBlockedUntil||waProcessing){
     waMonitorRAF=requestAnimationFrame(waMonitorLoop);
     return;
   }
@@ -213,7 +223,7 @@ function waMonitorLoop(){
     waLastVoiceAt=now;
     if(!waLocalRecording&&waHandsFree){
       waBeginRecording(false);
-      setVoiceState('listening','Manos libres · escuchando…');
+      if(waLocalRecording)setVoiceState('listening','Manos libres · escuchando…');
     }
   }
 
@@ -229,6 +239,9 @@ async function waEnsureStream(){
   try{
     waLocalStream=await waOpenSelectedMic();
     waCreateAnalyser(waLocalStream);
+    if(waAudioContext&&waAudioContext.state==='suspended'){
+      try{await waAudioContext.resume()}catch(e){}
+    }
     waMonitorLoop();
     return true;
   }catch(err){
@@ -253,10 +266,6 @@ function waStripWake(text){
   const re=new RegExp(`(^|\\b)${escaped}\\b[,:;.!?\\s-]*`,'i');
   if(!re.test(text))return null;
   return text.replace(re,'').trim();
-}
-
-function waSayShort(text){
-  try{if(typeof speak==='function')speak(text)}catch(e){}
 }
 
 async function waHandleHandsFreeText(text){
@@ -286,17 +295,15 @@ async function waHandleHandsFreeText(text){
 
 function waRearmHandsFreeSoon(){
   if(!waHandsFree)return;
-  const check=()=>{
+  setTimeout(()=>{
     if(!waHandsFree)return;
-    if(waAssistantIsSpeaking()){
-      waBlockedUntil=Date.now()+650;
-      setTimeout(check,180);
+    if(waTtsActive||waProcessing||waLocalRecording){
+      waRearmHandsFreeSoon();
       return;
     }
     waBlockedUntil=Math.max(waBlockedUntil,Date.now()+350);
     setVoiceState('ready',waWaitingLabel());
-  };
-  setTimeout(check,120);
+  },180);
 }
 
 async function waLocalFinish(manual){
@@ -364,10 +371,11 @@ async function waToggleHandsFree(){
 
   waHandsFree=true;
   waProcessing=false;
-  waBlockedUntil=Date.now()+700;
+  waBlockedUntil=Date.now()+350;
   if(btn){btn.textContent='Manos libres: ON';btn.classList.add('active')}
-  setVoiceState('ready',`Manos libres · decí “${WA_LOCAL_VOICE.wakeWord}”`);
-  waSayShort(`Manos libres activo. Decí ${WA_LOCAL_VOICE.wakeWord} cuando me necesites.`);
+  setVoiceState('ready',waWaitingLabel());
+  // Sin mensaje hablado al activar: evita que el propio TTS interfiera con
+  // la primera deteccion del wake word.
 }
 
 function waSetWakeWord(value){
@@ -378,6 +386,8 @@ function waSetWakeWord(value){
   if(label)label.value=v;
   if(waHandsFree)setVoiceState('ready',`Manos libres · decí “${v}”`);
 }
+
+waInstallTtsGuard();
 
 if(typeof voiceRun!=='undefined'&&voiceRun){
   voiceRun.onclick=e=>{e.preventDefault();e.stopImmediatePropagation();waLocalStart()};
@@ -400,7 +410,7 @@ window.WA_VOICE_PRO={
   start:waLocalStart,
   stop:waLocalStop,
   listInputs:waLocalInputs,
-  version:'local-whisper-2.1'
+  version:'local-whisper-2.2'
 };
 window.WA_HANDSFREE={
   toggle:waToggleHandsFree,
