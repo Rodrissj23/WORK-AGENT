@@ -1,5 +1,5 @@
-// Work Agent - Transcription PRO v2
-// OpenAI STT via backend. Voz PRO es duena exclusiva del microfono.
+// Work Agent - Transcription PRO v2.1
+// OpenAI STT via backend. Voz PRO toma el microfono de forma exclusiva.
 
 const WA_TRANSCRIPTION_CFG = {
   endpoint: localStorage.getItem('wa_transcription_endpoint') || 'https://work-agent-voice-api.vercel.app/api/transcribe',
@@ -30,11 +30,19 @@ function waSetProEndpoint(url){
 }
 function waSleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
+function waSetReadyLabel(){
+  if(typeof voiceLabel!=='undefined' && voiceLabel){
+    voiceLabel.textContent='Voz PRO lista';
+  }
+  if(typeof voiceRun!=='undefined' && voiceRun){
+    voiceRun.dataset.voiceEngine='pro';
+    voiceRun.title='Voz PRO activa';
+  }
+}
+
 function waCleanupProStream(){
   if(waProStream){
-    waProStream.getTracks().forEach(t=>{
-      try{t.stop();}catch(e){}
-    });
+    waProStream.getTracks().forEach(t=>{try{t.stop();}catch(e){}});
     waProStream=null;
   }
 }
@@ -48,7 +56,6 @@ async function waDisableLegacySpeechRecognition(){
 
   if(typeof recognition==='undefined' || !recognition) return;
 
-  // Neutralizamos callbacks del motor viejo para que no pueda reiniciarse.
   try{recognition.onresult=null;}catch(e){}
   try{recognition.onspeechend=null;}catch(e){}
   try{recognition.onspeechstart=null;}catch(e){}
@@ -57,50 +64,26 @@ async function waDisableLegacySpeechRecognition(){
 
   await new Promise(resolve=>{
     let done=false;
-    const finish=()=>{
-      if(done) return;
-      done=true;
-      resolve();
-    };
-
+    const finish=()=>{if(done)return;done=true;resolve();};
     try{recognition.onend=finish;}catch(e){}
-    try{
-      manualStop=true;
-      recognition.abort();
-    }catch(e){
-      try{recognition.stop();}catch(_){}
-    }
-
+    try{manualStop=true;recognition.abort();}
+    catch(e){try{recognition.stop();}catch(_) {}}
     setTimeout(finish,900);
   });
 
-  // Chrome/Linux a veces mantiene el dispositivo unos cientos de ms despues de onend.
   await waSleep(350);
 }
 
 async function waGetMicStream(){
-  // Primer intento con procesamiento de voz.
   try{
     return await navigator.mediaDevices.getUserMedia({
-      audio:{
-        echoCancellation:true,
-        noiseSuppression:true,
-        autoGainControl:true
-      }
+      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
     });
   }catch(firstErr){
-    // Algunos drivers Linux/Chrome fallan con constraints avanzados.
     if(firstErr?.name==='NotAllowedError' || firstErr?.name==='SecurityError') throw firstErr;
-
     await waSleep(180);
-
-    // Segundo intento: dispositivo default sin constraints especiales.
-    try{
-      return await navigator.mediaDevices.getUserMedia({audio:true});
-    }catch(secondErr){
-      secondErr.firstAttempt=firstErr;
-      throw secondErr;
-    }
+    try{return await navigator.mediaDevices.getUserMedia({audio:true});}
+    catch(secondErr){secondErr.firstAttempt=firstErr;throw secondErr;}
   }
 }
 
@@ -112,32 +95,22 @@ async function waStartProRecording(){
     throw new Error('Este navegador no soporta grabacion para Voz PRO.');
   }
 
-  if('speechSynthesis' in window) window.speechSynthesis.cancel();
+  if('speechSynthesis'in window) window.speechSynthesis.cancel();
   waCleanupProStream();
+  setVoiceState('ready','Preparando Voz PRO…');
   await waDisableLegacySpeechRecognition();
 
-  try{
-    waProStream=await waGetMicStream();
-  }catch(err){
+  try{waProStream=await waGetMicStream();}
+  catch(err){
     console.error('No se pudo abrir el microfono:',err,err?.firstAttempt);
-
-    if(err?.name==='NotAllowedError' || err?.name==='SecurityError'){
-      throw new Error('Chrome no tiene permiso para usar el micrófono. Revisá el candado de la barra de direcciones.');
-    }
-    if(err?.name==='NotFoundError' || err?.name==='DevicesNotFoundError'){
-      throw new Error('No encontré ningún micrófono disponible en el sistema.');
-    }
-    if(err?.name==='NotReadableError' || /could not start audio source/i.test(err?.message||'')){
-      throw new Error('Chrome detecta el micrófono pero no puede abrirlo. Recargá esta pestaña; si sigue igual, revisamos el dispositivo de entrada de Chrome/Linux.');
-    }
+    if(err?.name==='NotAllowedError'||err?.name==='SecurityError') throw new Error('Chrome no tiene permiso para usar el micrófono. Revisá el candado de la barra de direcciones.');
+    if(err?.name==='NotFoundError'||err?.name==='DevicesNotFoundError') throw new Error('No encontré ningún micrófono disponible en el sistema.');
+    if(err?.name==='NotReadableError'||/could not start audio source/i.test(err?.message||'')) throw new Error('Chrome detecta el micrófono pero no puede abrirlo. Revisamos el dispositivo de entrada si persiste.');
     throw new Error(`No pude abrir el micrófono: ${err?.name||err?.message||'error desconocido'}`);
   }
 
   const tracks=waProStream.getAudioTracks();
-  if(!tracks.length){
-    waCleanupProStream();
-    throw new Error('El navegador abrió audio pero no entregó ninguna pista de micrófono.');
-  }
+  if(!tracks.length){waCleanupProStream();throw new Error('El navegador abrió audio pero no entregó ninguna pista de micrófono.');}
 
   const mimeType=waPickMimeType();
   waProChunks=[];
@@ -160,11 +133,8 @@ function waStopProRecording(){
   if(waProStopTimer){clearTimeout(waProStopTimer);waProStopTimer=null;}
   waProRecording=false;
   setVoiceState('ready','Transcribiendo…');
-  try{
-    if(waProRecorder&&waProRecorder.state!=='inactive') waProRecorder.stop();
-  }catch(e){
-    waCleanupProStream();
-  }
+  try{if(waProRecorder&&waProRecorder.state!=='inactive')waProRecorder.stop();}
+  catch(e){waCleanupProStream();}
 }
 
 async function waFinishProRecording(){
@@ -172,21 +142,11 @@ async function waFinishProRecording(){
     const mimeType=waProRecorder?.mimeType||'audio/webm';
     const blob=new Blob(waProChunks,{type:mimeType});
     waCleanupProStream();
-
-    if(blob.size<700){
-      setVoiceState('ready','Voz lista');
-      feedback('No escuché suficiente audio.',true,'No te escuché bien.');
-      return;
-    }
+    if(blob.size<700){setVoiceState('ready','Voz PRO lista');feedback('No escuché suficiente audio.',true,'No te escuché bien.');return;}
 
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),15000);
-    const res=await fetch(WA_TRANSCRIPTION_CFG.endpoint,{
-      method:'POST',
-      headers:{'Content-Type':mimeType},
-      body:blob,
-      signal:controller.signal
-    });
+    const res=await fetch(WA_TRANSCRIPTION_CFG.endpoint,{method:'POST',headers:{'Content-Type':mimeType},body:blob,signal:controller.signal});
     clearTimeout(timeout);
 
     const data=await res.json().catch(()=>({}));
@@ -198,42 +158,43 @@ async function waFinishProRecording(){
 
     const text=String(data.text||data.transcript||'').trim();
     if(!text) throw new Error('La transcripción volvió vacía.');
-
     commandInput.value=text;
     setVoiceState('ready',`Voz PRO: “${text}”`);
     runCommand(text,true);
   }catch(err){
     waCleanupProStream();
-    setVoiceState('ready','Voz lista');
+    setVoiceState('ready','Voz PRO lista');
     console.warn('Voz PRO falló:',err);
     feedback(`Voz PRO: ${err.message||'error desconocido'}`,true,'No pude transcribir eso.');
   }
 }
 
-if(typeof voiceRun!=='undefined'&&voiceRun){
-  voiceRun.addEventListener('click',async e=>{
-    if(!waTranscriptionProEnabled()) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
-    try{
-      if(waProRecording) waStopProRecording();
-      else await waStartProRecording();
-    }catch(err){
-      waCleanupProStream();
-      setVoiceState('ready','Voz lista');
-      feedback(err.message||'No pude iniciar Voz PRO.',true,'No pude iniciar el micrófono.');
-    }
-  },true);
+async function waHandleVoiceProClick(e){
+  if(e){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();}
+  try{
+    if(waProRecording) waStopProRecording();
+    else await waStartProRecording();
+  }catch(err){
+    waCleanupProStream();
+    setVoiceState('ready','Voz PRO lista');
+    feedback(err.message||'No pude iniciar Voz PRO.',true,'No pude iniciar el micrófono.');
+  }
 }
 
-// Desactivar el motor viejo apenas carga Voz PRO, no esperar al primer click.
-setTimeout(()=>{waDisableLegacySpeechRecognition().catch(()=>{});},0);
+if(typeof voiceRun!=='undefined'&&voiceRun){
+  // Elimina la ambigüedad: handler directo de Voz PRO + captura.
+  voiceRun.onclick=waHandleVoiceProClick;
+  voiceRun.addEventListener('click',waHandleVoiceProClick,true);
+}
+
+waSetReadyLabel();
+setTimeout(()=>{waSetReadyLabel();waDisableLegacySpeechRecognition().catch(()=>{});},0);
 
 window.WA_VOICE_PRO={
   setEndpoint:waSetProEndpoint,
   enabled:waTranscriptionProEnabled,
   start:waStartProRecording,
   stop:waStopProRecording,
-  legacyDisabled:()=>waLegacySpeechDisabled
+  legacyDisabled:()=>waLegacySpeechDisabled,
+  version:'2.1'
 };
