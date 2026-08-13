@@ -7,7 +7,7 @@ Objetivo: mostrar una primera versión funcional de un asistente operativo, no u
 1. Abrir WORK AGENT en Chrome y hacer recarga forzada (`Ctrl+F5`).
 2. En la PC laboral, iniciar **ZERO Local Core** con `start_zero_windows.bat`.
 3. Iniciar `zero_gmail.py --watch` en la carpeta `ZERO_GMAIL` si se quiere mostrar Gmail actualizado en vivo.
-4. Verificar que no esté corriendo `zero_local_bridge.py` al mismo tiempo que ZERO Local Core: ambos usan el puerto `8765`.
+4. No usar el bridge antiguo como servidor principal. El puerto `8765` queda reservado para ZERO Local Core.
 5. Escribir `Zero, modo demo.` para limpiar contexto de pruebas sin borrar memoria persistente.
 6. Escribir `Zero, diagnóstico.` y revisar el resultado.
 7. Probar primero por texto. Después probar voz.
@@ -67,15 +67,16 @@ Esperado: resume el contexto activo sin inventar acciones.
 
 Esperado: si el núcleo local está conectado y la lectura es reciente, informa estado real de Gmail. Si la lectura tiene más de 20 minutos, ZERO avisa que está desactualizada en vez de presentar datos viejos como actuales.
 
-Si el cache local nuevo está disponible, se puede probar además:
+Con el cache local disponible, se puede probar además:
 
 - `¿De quién?`
 - `¿Tengo mails de Javier?`
 - `Leeme el último de Prevención.`
 - `¿Qué dice?`
 - `¿Cuál es el asunto?`
+- `Siguiente.`
 
-Los detalles se leen desde `zero_gmail_cache.json` en la PC local. No se publican en `/status`.
+Los detalles se leen desde `zero_gmail_cache.json` en la PC local únicamente cuando el usuario los pide. No se publican en `/status`.
 
 ### 7. Capacidades y diagnóstico
 
@@ -110,17 +111,34 @@ Probar uno o dos, no todos:
 
 ## Plan B de voz
 
-El botón **Hablar** usa Whisper local cuando ZERO Local Core está disponible. Si el núcleo local no puede instalarse o arrancar, cerrar cualquier proceso que esté ocupando `127.0.0.1:8765` y usar el reconocimiento de voz de respaldo de Chrome para comandos manuales.
+El botón **Hablar** usa Whisper local cuando ZERO Local Core está disponible. Si el núcleo local no puede instalarse o arrancar, usar el reconocimiento de voz de respaldo de Chrome para comandos manuales.
 
 Si cualquier motor de voz falla durante la presentación, escribir exactamente los mismos comandos en el campo de texto. La lógica de ZERO no depende de la voz.
 
-## Plan B de backend
+## Plan B de backend — Core Lite
 
-Si ZERO Local Core no puede arrancar, `zero_local_bridge.py` puede exponer `/status` y la API local de Gmail para mantener funcionando la parte operativa sin Whisper. Se usa **uno u otro**, nunca ambos a la vez, porque comparten el puerto `8765`.
+Si `local_whisper_server.py` no puede arrancar por una dependencia de Whisper, usar desde la carpeta `WORK-AGENT-VOICE-API`:
+
+```cmd
+python zero_core_lite.py
+```
+
+`zero_core_lite.py` usa únicamente la biblioteca estándar de Python. Mantiene el puerto `8765`, `/status`, POST `/status/gmail` y `/gmail/messages`, pero **no carga Whisper ni SQLite**. En ese modo:
+
+- Gmail y el briefing siguen funcionando.
+- La cognición conversacional sigue funcionando en el navegador.
+- La memoria usa su fallback de `localStorage`.
+- El botón de voz debe usar Chrome como respaldo.
+
+No ejecutar Core Lite y ZERO Local Core al mismo tiempo.
+
+El `zero_local_bridge.py` queda como herramienta de respaldo separada y usa el puerto `8766`; no es el servidor principal de la demo.
 
 ## Python en Windows
 
 Para el núcleo de voz se recomienda Python **3.11, 3.12 o 3.13**. `install_windows.bat` intenta seleccionar automáticamente una de esas versiones. Si la PC solo tiene Python 3.14, el instalador se detiene de forma explícita en lugar de dejar una instalación incompleta.
+
+Core Lite sí puede ejecutarse con la instalación normal de Python porque no depende de `faster-whisper` ni CTranslate2.
 
 ## Qué no mostrar todavía
 
