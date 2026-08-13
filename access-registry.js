@@ -1,22 +1,20 @@
-// ZERO access-registry v1.1
-// Registro de accesos por voz. Algunos portales usan URLs temporales de login; se marcan como provisionales.
+// ZERO access-registry v1.2
+// Registro de accesos por voz con URLs estables de trabajo.
 (function(){
   const ACCESS={
     'puente-digital':{
       label:'Puente Digital',
-      url:'https://login.gruposancorseguros.com.ar/u/login/identifier?state=hKFo2SB5MnNXd0NLNUR5emtBVTAxUk9iQTNDNXFCMHdtelpHNaFur3VuaXZlcnNhbC1sb2dpbqN0aWTZIDU5Qjc3TjZzRlBPSWF2T252Z1hBd0o2ZXdybmlweTROo2NpZNkgN3lkNmljWGFZbGZWNjVOR3BrTnNWT1poTkZETllnb1k',
-      provisional:true,
+      url:'https://puentedigital.prevencionsalud.com.ar/',
       aliases:['puente digital','puente','cobranzas','portal puente']
     },
     'ceibo':{
       label:'Ceibo',
-      url:'https://login.gruposancorseguros.com.ar/u/login/identifier?state=hKFo2SBoOGNuMTFsWl9WdDd4azYxZ1FEQkd1STE3UXpKX05MeKFur3VuaXZlcnNhbC1sb2dpbqN0aWTZIFo0T0diU2VVeTJacF85VWFxSF8yT3pjdjFrdEY4a0cyo2NpZNkgRVNPZEsxWlFOSHB0UDlvdTFUaWxjTkFnVUFMYkdSdnc',
-      provisional:true,
-      aliases:['ceibo']
+      url:'https://autogestionpas.prevencionsalud.com.ar/',
+      aliases:['ceibo','autogestion pas','autogestion prevencion']
     },
     'ventas-prevencion':{
       label:'Planilla de ventas Prevención',
-      url:'https://docs.google.com/spreadsheets/d/1Hc1aBL-6q3mvFCVD1iSCCE5M_E2JHSgxNse5NTebW0k/edit?gid=1207104348#gid=1207104348&fvid=1468673717',
+      url:'https://docs.google.com/spreadsheets/d/1Hc1aBL-6q3mvFCVD1iSCCE5M_E2JHSgxNse5NTebW0k/edit?gid=319597991#gid=319597991',
       requiresWorkAccount:true,
       aliases:['planilla de ventas','ventas prevencion','planilla prevencion','ventas de prevencion','planilla de este mes']
     },
@@ -37,7 +35,7 @@
     },
     'prevencion':{
       label:'Prevención Salud',
-      url:'',
+      url:'https://puentedigital.prevencionsalud.com.ar/',
       aliases:['prevencion','prevencion salud','portal prevencion','rendir ventas','rendir','rendicion','tengo que rendir ventas','vamos a rendir']
     }
   };
@@ -74,7 +72,6 @@
     window.open(a.url,'_blank','noopener,noreferrer');
     let message=`Listo, te abro ${a.label}.`;
     if(a.requiresWorkAccount)message+=` Acordate de usar la cuenta laboral.`;
-    if(a.provisional)message+=` Este acceso usa una URL temporal de login y puede caducar.`;
     commandFeedback.textContent=message;
     commandFeedback.classList.remove('error');
     try{speak(`Listo, te abro ${a.label}.`)}catch(e){}
@@ -92,7 +89,7 @@
   }
 
   window.ZERO_ACCESS={
-    version:'1.1',
+    version:'1.2',
     registry:ACCESS,
     match:matchAccess,
     open:openAccess,
