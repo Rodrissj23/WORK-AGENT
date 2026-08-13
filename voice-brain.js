@@ -1,5 +1,5 @@
-// Work Agent Voice Brain v1.3
-// Parser por entidades + contexto + seguimiento conversacional estable.
+// Work Agent Voice Brain v1.4
+// Parser por entidades + contexto + seguimiento conversacional mas conservador.
 
 const WA_CONTEXT_TTL = 3500;
 const WA_DUPLICATE_TTL = 1600;
@@ -89,11 +89,9 @@ function waResolveFollowUp(raw,entities){
 
   const prev=waConversation.lastMini;
   const hasEntity=!!entities.sex||entities.age!==null||!!entities.unit;
-  const q=normalizeCommand(raw);
-  const followWord=/\b(y|ahora|otro|otra|mismo|misma|cambia|cambiar)\b/.test(q);
+  if(!hasEntity) return null;
 
-  if(!hasEntity&&!followWord) return null;
-
+  // Seguimiento conservador: solo cambia lo que realmente se escucho.
   const merged={
     sex:entities.sex||prev.sex,
     age:entities.age!==null?entities.age:prev.age,
@@ -154,6 +152,19 @@ isCompleteVoiceCommand=function(raw){
   return false;
 };
 
+// Voz mas pausada y natural en toda la capa conversacional.
+speak=function(text){
+  if(!('speechSynthesis' in window)||!text) return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang=preferredVoice?.lang||'es-AR';
+  if(preferredVoice) u.voice=preferredVoice;
+  u.rate=.94;
+  u.pitch=1;
+  u.volume=1;
+  window.speechSynthesis.speak(u);
+};
+
 function waArmFollowUpTimeout(){
   if(waFollowUpTimer) clearTimeout(waFollowUpTimer);
   waFollowUpTimer=setTimeout(()=>{
@@ -171,9 +182,7 @@ function waStartFreshFollowUp(attempt=0){
   if(!waConversationFresh()) return;
 
   if(isListening){
-    if(attempt<8){
-      setTimeout(()=>waStartFreshFollowUp(attempt+1),90);
-    }
+    if(attempt<8) setTimeout(()=>waStartFreshFollowUp(attempt+1),100);
     return;
   }
 
@@ -189,13 +198,13 @@ function waStartFreshFollowUp(attempt=0){
     recognition.start();
     setVoiceState('listening','Seguimos · esperá el pip');
   }catch(e){
-    if(attempt<8) setTimeout(()=>waStartFreshFollowUp(attempt+1),120);
+    if(attempt<8) setTimeout(()=>waStartFreshFollowUp(attempt+1),140);
   }
 }
 
 function waSpeakAndThenListen(text){
   if(!('speechSynthesis' in window)){
-    setTimeout(()=>waStartFreshFollowUp(),250);
+    setTimeout(()=>waStartFreshFollowUp(),400);
     return;
   }
 
@@ -203,12 +212,12 @@ function waSpeakAndThenListen(text){
   const u=new SpeechSynthesisUtterance(text);
   u.lang=preferredVoice?.lang||'es-AR';
   if(preferredVoice) u.voice=preferredVoice;
-  u.rate=1.04;
-  u.pitch=.98;
+  u.rate=.92;
+  u.pitch=1;
   u.volume=1;
 
   u.onend=()=>{
-    setTimeout(()=>waStartFreshFollowUp(),250);
+    setTimeout(()=>waStartFreshFollowUp(),400);
   };
 
   window.speechSynthesis.speak(u);
@@ -247,14 +256,14 @@ runCommand=function(value=null,fromVoice=false){
       commandFeedback.textContent='Tengo la edad. Decime mujer o varón.';
       commandFeedback.classList.remove('error');
       waVoiceContext.updatedAt=Date.now();
-      setTimeout(()=>waStartFreshFollowUp(),120);
+      setTimeout(()=>waStartFreshFollowUp(),220);
       return;
     }
     if(merged.age===null){
       commandFeedback.textContent='Tengo el sexo. Decime la edad.';
       commandFeedback.classList.remove('error');
       waVoiceContext.updatedAt=Date.now();
-      setTimeout(()=>waStartFreshFollowUp(),120);
+      setTimeout(()=>waStartFreshFollowUp(),220);
       return;
     }
   }
@@ -276,7 +285,7 @@ answerMiniHub=function(mini){
   commandFeedback.classList.remove('error');
 
   waRememberMini(mini);
-  waSpeakAndThenListen(`${altura} centímetros, ${peso} kilos.`);
+  waSpeakAndThenListen(`${altura} centímetros. ${peso} kilos.`);
 };
 
 if(typeof recognition!=='undefined'&&recognition){
@@ -296,12 +305,18 @@ if(typeof recognition!=='undefined'&&recognition){
     if(heard){
       commandInput.value=heard;
       setVoiceState('listening',`Escuchando: “${heard}”`);
-      scheduleFinish(isCompleteVoiceCommand(heard)?55:520);
+
+      // Primer comando: rapido. Follow-up: un poco mas paciente para evitar errores.
+      const complete=isCompleteVoiceCommand(heard);
+      const delay=waConversation.awaiting ? (complete?220:700) : (complete?60:520);
+      scheduleFinish(delay);
     }
   };
 
   recognition.onspeechend=()=>{
     const heard=fullTranscript();
-    scheduleFinish(isCompleteVoiceCommand(heard)?45:450);
+    const complete=isCompleteVoiceCommand(heard);
+    const delay=waConversation.awaiting ? (complete?180:620) : (complete?50:450);
+    scheduleFinish(delay);
   };
 }
