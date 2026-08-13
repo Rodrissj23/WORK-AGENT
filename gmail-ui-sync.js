@@ -1,4 +1,4 @@
-// ZERO Gmail UI + Conversation v2.0
+// ZERO Gmail UI + Conversation v2.1
 (function(){
   'use strict';
 
@@ -75,9 +75,7 @@
     return email.split('@')[0]||'remitente desconocido';
   }
 
-  function cleanSnippet(value){
-    return String(value||'').replace(/\s+/g,' ').trim().slice(0,360);
-  }
+  function cleanSnippet(value){return String(value||'').replace(/\s+/g,' ').trim().slice(0,360)}
 
   async function listPriority(){
     try{
@@ -108,6 +106,18 @@
     }catch(e){say('No pude consultar ese correo en el cache local de Gmail.')}
   }
 
+  async function countFrom(sender){
+    const wanted=String(sender||'').trim();
+    if(!wanted){say('Decime de quién querés buscar correos.');return}
+    try{
+      const d=await fetchMessages({sender:wanted,limit:20,details:false});
+      ctx.items=d?.items||[];ctx.selected=ctx.items[0]||null;ctx.lastQuery=`sender:${wanted}`;
+      if(!ctx.items.length){say(`No encontré correos recientes que coincidan con ${wanted}.`);return}
+      const first=ctx.items[0];
+      say(`Sí. Encontré ${ctx.items.length} ${ctx.items.length===1?'correo reciente':'correos recientes'} de ${senderName(first.from)}. El más reciente tiene como asunto ${first.subject}.`);
+    }catch(e){say('No pude consultar esos correos en el cache local de Gmail.')}
+  }
+
   function readSelected(){
     const m=ctx.selected;
     if(!m){say('No tengo un correo seleccionado todavía. Decime de quién querés el último.');return}
@@ -115,11 +125,18 @@
     say(`El asunto es ${m.subject}.${preview?` La vista previa dice: ${preview}`:' No tengo vista previa guardada para ese correo.'}`);
   }
 
+  function selectedSubject(){
+    const m=ctx.selected;
+    if(!m){say('No tengo un correo seleccionado todavía.');return}
+    say(`El asunto es ${m.subject}.`);
+  }
+
   function extractSender(q){
-    let m=q.match(/(?:ultimo|ultima|mail|correo|mensaje)\s+(?:mail\s+|correo\s+)?(?:de|del)\s+(.+)$/);
+    let m=q.match(/(?:ultimo|ultima|mail|mails|correo|correos|mensaje|mensajes)\s+(?:mail\s+|correo\s+)?(?:de|del)\s+(.+)$/);
     if(!m)m=q.match(/(?:que dice|leeme|lee|mostrame|mostrar|resumime|resume).*?(?:de|del)\s+(.+)$/);
+    if(!m)m=q.match(/(?:tengo|hay)\s+(?:mail|mails|correo|correos|mensaje|mensajes)\s+(?:de|del)\s+(.+)$/);
     if(!m)return'';
-    return m[1].replace(/\b(por favor|ultimo|ultima|mail|correo|mensaje)\b/g,' ').replace(/\s+/g,' ').trim();
+    return m[1].replace(/\b(por favor|ultimo|ultima|mail|mails|correo|correos|mensaje|mensajes)\b/g,' ').replace(/\s+/g,' ').trim();
   }
 
   const previous=window.runCommand||(typeof runCommand!=='undefined'?runCommand:null);
@@ -133,8 +150,10 @@
       if(ctx.items.length&&/^(de quien|de quienes|quienes|quien)$/i.test(q)){listSenders();return}
 
       const sender=extractSender(q);
-      if(sender&&/\b(ultimo|ultima|mail|correo|mensaje|que dice|leeme|lee|mostrame|resumime|resume)\b/.test(q)){latestFrom(sender);return}
+      if(sender&&/\b(tengo|hay)\b/.test(q)&&/\b(mail|mails|correo|correos|mensaje|mensajes)\b/.test(q)){countFrom(sender);return}
+      if(sender&&/\b(ultimo|ultima|mail|mails|correo|correos|mensaje|mensajes|que dice|leeme|lee|mostrame|resumime|resume)\b/.test(q)){latestFrom(sender);return}
 
+      if(ctx.selected&&/^(cual es el asunto|que asunto tiene|y el asunto|asunto)$/i.test(q)){selectedSubject();return}
       if(ctx.selected&&/^(que dice|leelo|leeme|lee eso|resumilo|resumime eso|que decia)$/i.test(q)){readSelected();return}
 
       return previous(value,fromVoice);
@@ -142,5 +161,5 @@
   }
 
   sync();setTimeout(sync,900);setInterval(sync,60000);
-  window.ZERO_GMAIL_UI={version:'2.0.0',sync,priority:listPriority,latestFrom,context:()=>({...ctx})};
+  window.ZERO_GMAIL_UI={version:'2.1.0',sync,priority:listPriority,latestFrom,countFrom,context:()=>({...ctx})};
 })();
