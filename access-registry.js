@@ -1,20 +1,23 @@
-// ZERO access-registry v1
-// Registro de accesos por voz. URLs faltantes se completan luego desde la oficina.
+// ZERO access-registry v1.1
+// Registro de accesos por voz. Algunos portales usan URLs temporales de login; se marcan como provisionales.
 (function(){
   const ACCESS={
     'puente-digital':{
       label:'Puente Digital',
-      url:'',
+      url:'https://login.gruposancorseguros.com.ar/u/login/identifier?state=hKFo2SB5MnNXd0NLNUR5emtBVTAxUk9iQTNDNXFCMHdtelpHNaFur3VuaXZlcnNhbC1sb2dpbqN0aWTZIDU5Qjc3TjZzRlBPSWF2T252Z1hBd0o2ZXdybmlweTROo2NpZNkgN3lkNmljWGFZbGZWNjVOR3BrTnNWT1poTkZETllnb1k',
+      provisional:true,
       aliases:['puente digital','puente','cobranzas','portal puente']
     },
     'ceibo':{
       label:'Ceibo',
-      url:'',
+      url:'https://login.gruposancorseguros.com.ar/u/login/identifier?state=hKFo2SBoOGNuMTFsWl9WdDd4azYxZ1FEQkd1STE3UXpKX05MeKFur3VuaXZlcnNhbC1sb2dpbqN0aWTZIFo0T0diU2VVeTJacF85VWFxSF8yT3pjdjFrdEY4a0cyo2NpZNkgRVNPZEsxWlFOSHB0UDlvdTFUaWxjTkFnVUFMYkdSdnc',
+      provisional:true,
       aliases:['ceibo']
     },
     'ventas-prevencion':{
       label:'Planilla de ventas Prevención',
-      url:'',
+      url:'https://docs.google.com/spreadsheets/d/1Hc1aBL-6q3mvFCVD1iSCCE5M_E2JHSgxNse5NTebW0k/edit?gid=1207104348#gid=1207104348&fvid=1468673717',
+      requiresWorkAccount:true,
       aliases:['planilla de ventas','ventas prevencion','planilla prevencion','ventas de prevencion','planilla de este mes']
     },
     'drive':{
@@ -69,7 +72,10 @@
       return true;
     }
     window.open(a.url,'_blank','noopener,noreferrer');
-    commandFeedback.textContent=`Listo, te abro ${a.label}.`;
+    let message=`Listo, te abro ${a.label}.`;
+    if(a.requiresWorkAccount)message+=` Acordate de usar la cuenta laboral.`;
+    if(a.provisional)message+=` Este acceso usa una URL temporal de login y puede caducar.`;
+    commandFeedback.textContent=message;
     commandFeedback.classList.remove('error');
     try{speak(`Listo, te abro ${a.label}.`)}catch(e){}
     return true;
@@ -86,7 +92,7 @@
   }
 
   window.ZERO_ACCESS={
-    version:'1.0',
+    version:'1.1',
     registry:ACCESS,
     match:matchAccess,
     open:openAccess,
