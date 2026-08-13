@@ -1,4 +1,4 @@
-// ZERO capabilities v1.3
+// ZERO capabilities v1.4
 (function(){
   'use strict';
   const previous=window.runCommand||(typeof runCommand!=='undefined'?runCommand:null);
@@ -10,6 +10,8 @@
   }
 
   function demoMode(){
+    // demo-readiness limpia su contexto Gmail/ventas y también pide limpiar cognición v2.
+    try{if(window.ZERO_DEMO_READINESS?.reset){window.ZERO_DEMO_READINESS.reset();return}}catch(e){}
     try{window.ZERO_CONVERSATION_V2?.clear?.()}catch(e){}
     try{localStorage.removeItem('zero:demo:context')}catch(e){}
     try{if('speechSynthesis'in window)window.speechSynthesis.cancel()}catch(e){}
@@ -23,5 +25,5 @@
     if(/^(modo demo|iniciar demo|preparar demo|reiniciar contexto)$/.test(q)){demoMode();return}
     return previous(value,fromVoice)
   }}
-  window.ZERO_CAPABILITIES={say:answer,demoMode};
+  window.ZERO_CAPABILITIES={version:'1.4.0',say:answer,demoMode};
 })();
