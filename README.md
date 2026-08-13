@@ -1,38 +1,41 @@
-# Work Hub V1
+# WORK AGENT
 
-Panel operativo personal: un solo lugar desde donde acceder a todos los
-sistemas de trabajo. No hace el trabajo — organiza, muestra y conecta
-las herramientas que ya lo hacen.
+Centro operativo personal para reunir automatizaciones, consultas rápidas y alertas de trabajo en una sola interfaz.
 
-## Sistemas incluidos (V1)
+## Estado actual
 
-| ID    | Sistema                    | Estado        |
-|-------|-----------------------------|---------------|
-| WH-01 | Scoring automático          | En desarrollo |
-| WH-02 | Mora automatizada           | En desarrollo |
-| WH-03 | Mini Hub — Prevención       | Planificado   |
-| WH-04 | Control de liquidaciones    | Activo        |
-| WH-05 | Mi liquidación              | Activo        |
+| ID | Sistema | Estado |
+|---|---|---|
+| WH-01 | Scoring automático | Operativo · reporte L-V 18:00 |
+| WH-02 | Mora automatizada | Operativo · motor Python local |
+| WH-03 | Mini Hub — Prevención | Operativo · integrado también dentro de WORK AGENT |
+| WH-04 | Control de liquidaciones | Operativo |
+| WH-05 | Mi liquidación | Operativo |
+| WH-06 | Gmail laboral filtrado | En integración |
+| WH-07 | Voz / Assistant | En desarrollo activo · Whisper local |
 
-## Cómo probarlo local
+## Voz
 
-Abrí `index.html` directamente en el navegador. No necesita servidor.
+Se probó inicialmente Chrome SpeechRecognition y luego OpenAI Transcription API. La API funcionó técnicamente, pero se descartó como motor principal por requerir créditos separados.
 
-## Cómo conectar un proyecto real
+La arquitectura actual es:
 
-En `app.js`, cambiá el `url: "#"` de cada objeto en `projects` por el
-link real (GitHub Pages, Apps Script Web App, lo que sea). Mientras
-diga `"#"`, el botón "Abrir →" avisa que todavía no está conectado.
+`micrófono -> faster-whisper local -> parser por entidades -> skill -> respuesta`
 
-## Cómo publicarlo (GitHub Pages)
+El frontend usa `transcription-local.js` y espera el motor local en `http://127.0.0.1:8765`.
 
-1. Repo → Settings → Pages.
-2. Source: rama `main`, carpeta `/root`.
-3. Guardar y esperar a que GitHub publique la URL.
+## Capacidades actuales
 
-## Próximas etapas
+- Abrir Mora, Scoring, Control de liquidaciones y Mi liquidación por comando.
+- Resolver Mini Hub directamente sin abrir otra pestaña.
+- Interpretar frases naturales de sexo + edad + unidad.
+- Memoria contextual corta para Mini Hub.
+- Respuesta hablada con TTS del navegador.
+- Selector de micrófono.
+- Centro de Atención preparado para recibir estados reales de los motores.
 
-1. Conectar cada sistema real.
-2. Sumar accesos rápidos a planillas/portales que usás todos los días.
-3. Preparar integración con Gmail, Calendar y WhatsApp.
-4. Evolucionar hacia Work Assistant → Work JARVIS.
+## Próximo objetivo
+
+Convertir WORK AGENT de panel de accesos a **asistente operativo real**: cada motor reporta estado, el centro de atención prioriza pendientes y la voz permite consultar/ejecutar tareas sin navegar manualmente.
+
+Ver `ROADMAP.md` para el plan actualizado.
