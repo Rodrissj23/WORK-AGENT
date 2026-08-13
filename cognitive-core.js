@@ -4,7 +4,7 @@
 (function(){
   'use strict';
 
-  const VERSION='0.3.1';
+  const VERSION='0.3.2';
   const MEMORY_KEY='zero:cognitive-memory:v1';
   const MAX_TURNS=24;
   const MAX_CONTEXT=8;
@@ -25,7 +25,7 @@
   function miniIntent(raw){try{if(typeof waExtractEntities==='function'){const e=waExtractEntities(raw);const count=(e.sex?1:0)+(e.age!==null?1:0)+(e.unit?1:0);if(count){let confidence=.56+count*.12;if(e.sex&&e.age!==null)confidence=.93;return {intent:'mini_hub',confidence:Math.min(confidence,.96),entities:{sex:e.sex,age:e.age,unit:e.unit}}}}}catch(e){}return null}
 
   function recentDistinctContexts(){const out=[],seen=new Set();for(let i=state.context.length-1;i>=0;i--){const item=state.context[i],key=`${item.focus||''}|${item.target||''}`;if(seen.has(key))continue;seen.add(key);out.push(item)}return out}
-  function resolveReference(raw){const q=normalize(raw);const result={hasReference:false,continuation:false,sequence:false,repeat:false,referent:null,confidence:0,ambiguous:false,cue:null};if(/^(y\b|ahora\b|despues\b|tambien\b|ademas\b)/.test(q)||/\b(y tambien|despues de eso|ahora eso)\b/.test(q))result.continuation=true;if(/\b(despues|luego|y despues|a continuacion)\b/.test(q))result.sequence=true;if(/\b(de nuevo|otra vez|nuevamente|volver a abrir|volvelo a abrir|volvela a abrir)\b/.test(q))result.repeat=true;const pronoun=/\b(eso|esa|ese|esto|esta|este|lo mismo|la misma|el mismo)\b/.exec(q),other=/\b(el otro|la otra|otro|otra)\b/.exec(q);if(pronoun||other||result.repeat){result.hasReference=true;result.cue=other?other[0]:(pronoun?pronoun[0]:'repeat');const recent=recentDistinctContexts();if(other){if(recent.length>=2){result.referent=recent[1];result.confidence=.78}else{result.ambiguous=true;result.confidence=.38}}else if(recent.length){result.referent=recent[0];result.confidence=result.repeat?.94:.88}else if(state.focus){result.referent={focus:state.focus,target:null,label:state.focus};result.confidence=.66}else{result.ambiguous=true;result.confidence=.25}}return result}
+  function resolveReference(raw){const q=normalize(raw);const result={hasReference:false,continuation:false,sequence:false,repeat:false,referent:null,confidence:0,ambiguous:false,cue:null};if(/^(y\b|ahora\b|despues\b|tambien\b|ademas\b)/.test(q)||/\b(y tambien|despues de eso|ahora eso)\b/.test(q))result.continuation=true;if(/\b(despues|luego|y despues|a continuacion)\b/.test(q))result.sequence=true;if(/\b(de nuevo|otra vez|nuevamente|volver a abrir|volvelo a abrir|volvela a abrir)\b/.test(q))result.repeat=true;const pronoun=/\b(eso|esa|ese|esto|esta|este|lo mismo|la misma|el mismo)\b/.exec(q),other=/\b(el otro|la otra|otro|otra)\b/.exec(q);if(pronoun||other||result.repeat){result.hasReference=true;result.cue=other?other[0]:(pronoun?pronoun[0]:'repeat');const recent=recentDistinctContexts();if(other){if(recent.length>=2){result.referent=recent[1];result.confidence=.78}else{result.ambiguous=true;result.confidence=.38}}else if(recent.length){result.referent=recent[0];result.confidence=result.repeat ? .94 : .88}else if(state.focus){result.referent={focus:state.focus,target:null,label:state.focus};result.confidence=.66}else{result.ambiguous=true;result.confidence=.25}}return result}
 
   function classify(raw){const q=normalize(raw),candidates=[];
     if(/\b(como estamos|briefing|estado general|resumen operativo|que tengo pendiente|mis pendientes)\b/.test(q))candidates.push({intent:'briefing',confidence:.98});
