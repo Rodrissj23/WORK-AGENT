@@ -1,0 +1,37 @@
+# ZERO / WORK AGENT - no versionar secretos ni runtime local
+.env
+.env.*
+credentials.json
+client_secret*.json
+token.json
+**/credentials.json
+**/client_secret*.json
+**/token.json
+
+# Telemetria, caches y memoria local
+zero_status.json
+work_agent_status.json
+zero_gmail_cache.json
+zero_memory.db
+zero_memory.db-*
+*.sqlite
+*.sqlite3
+
+# Entornos / Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Logs / capturas / temporales
+*.log
+*.webm
+*.wav
+*.ogg
+*.tmp
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
