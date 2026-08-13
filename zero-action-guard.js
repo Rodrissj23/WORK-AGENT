@@ -1,9 +1,11 @@
-// ZERO Action Guard v1.0
+// ZERO Action Guard v1.1
 // Evita promesas o ejecuciones ambiguas para acciones sensibles durante la demo.
 (function(){
   'use strict';
 
   let pending=null;
+  let baseRun=null;
+  let guardedRun=null;
 
   function norm(v){
     return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[¿?¡!.,;:]/g,' ').replace(/^\s*zero\b\s*/,'').replace(/\s+/g,' ').trim();
@@ -19,22 +21,12 @@
   const runVerb=q=>/\b(ejecuta|ejecutar|corre|correr|actualiza|actualizar|procesa|procesar|lanza|lanzar)\b/.test(q);
   const mailMutation=q=>/\b(manda|mandar|envia|enviar|responde|responder|borra|borrar|elimina|eliminar|archiva|archivar|marca|marcar)\b/.test(q)&&/\b(mail|mails|correo|correos|gmail)\b/.test(q);
 
-  function openKnown(target){
-    try{
-      if(target==='mora'){
-        const previous=window.ZERO_ACTION_GUARD?.base;
-        if(previous)return previous('mora',false);
-      }
-      if(target==='scoring'){
-        const previous=window.ZERO_ACTION_GUARD?.base;
-        if(previous)return previous('scoring',false);
-      }
-    }catch(e){}
-  }
+  function install(){
+    const current=window.runCommand||(typeof runCommand!=='undefined'?runCommand:null);
+    if(!current||current===guardedRun)return;
+    baseRun=current;
 
-  const previous=window.runCommand||(typeof runCommand!=='undefined'?runCommand:null);
-  if(previous){
-    window.runCommand=runCommand=function(value=null,fromVoice=false){
+    guardedRun=function(value=null,fromVoice=false){
       const raw=String(value!==null?value:(typeof commandInput!=='undefined'?commandInput.value:'')).trim();
       const q=norm(raw);
 
@@ -42,8 +34,14 @@
         if(no(q)){pending=null;say('Dale. No ejecuto nada.');return}
         if(yes(q)){
           const target=pending;pending=null;
-          if(target==='mora'){say('Te abro Mora. La ejecución automática queda bloqueada hasta que el motor local esté conectado con confirmación.');return previous('mora',fromVoice)}
-          if(target==='scoring'){say('Te abro Scoring. La ejecución remota del Apps Script todavía no está habilitada desde ZERO.');return previous('scoring',fromVoice)}
+          if(target==='mora'){
+            say('Te abro Mora. La ejecución automática queda bloqueada hasta que el motor local esté conectado con confirmación.');
+            return baseRun('mora',fromVoice);
+          }
+          if(target==='scoring'){
+            say('Te abro Scoring. La ejecución remota del Apps Script todavía no está habilitada desde ZERO.');
+            return baseRun('scoring',fromVoice);
+          }
         }
       }
 
@@ -61,9 +59,20 @@
         say('Scoring vive en Apps Script. Puedo consultar o abrir sus reportes, pero la ejecución remota todavía no está habilitada desde ZERO. ¿Querés que abra Scoring?');return;
       }
 
-      return previous(value,fromVoice);
+      return baseRun(value,fromVoice);
     };
+
+    window.runCommand=runCommand=guardedRun;
+    if(window.ZERO_ACTION_GUARD)window.ZERO_ACTION_GUARD.base=baseRun;
   }
 
-  window.ZERO_ACTION_GUARD={version:'1.0.0',base:previous,pending:()=>pending};
+  window.ZERO_ACTION_GUARD={version:'1.1.0',base:null,pending:()=>pending,install};
+  install();
+
+  // Cognición y voz pueden terminar de cargar después del DOM. Reinstalamos el guard
+  // para garantizar que las acciones sensibles siempre pasen por esta última capa.
+  window.addEventListener('load',()=>{
+    setTimeout(install,900);
+    setTimeout(install,2200);
+  },{once:true});
 })();
