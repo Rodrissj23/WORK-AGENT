@@ -1,4 +1,4 @@
-// ZERO Voice Fallback v1.0
+// ZERO Voice Fallback v1.1
 // Botón Hablar: Whisper local si está disponible; Web Speech de Chrome si no.
 (function(){
   'use strict';
@@ -57,6 +57,16 @@
     const local=await localReady();
     if(label&&!local&&SR)label.textContent='Voz de respaldo disponible';
   },700);
+
+  // Carga la respuesta de capacidades después de asegurar el motor de voz.
+  try{
+    if(!window.ZERO_CAPABILITIES){
+      const script=document.createElement('script');
+      script.src='zero-capabilities.js?v=20260813-1838';
+      script.async=true;
+      document.head.appendChild(script);
+    }
+  }catch(e){}
 
   window.ZERO_VOICE_FALLBACK={start:smartStart,localReady};
 })();
