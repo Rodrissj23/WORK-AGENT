@@ -55,3 +55,18 @@ jobs:
             test -f "$file" || { echo "Missing $file"; exit 1; }
           done
           echo "Demo-critical files present"
+
+      - name: Verify local script references
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -oE '<script src="[^"]+"' index.html \
+            | sed -E 's/^<script src="//; s/"$//' \
+            | while read -r src; do
+                file="${src%%\?*}"
+                case "$file" in
+                  http://*|https://*) continue ;;
+                esac
+                test -f "$file" || { echo "index.html references missing script: $file"; exit 1; }
+                echo "OK $file"
+              done
