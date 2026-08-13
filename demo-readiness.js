@@ -1,12 +1,18 @@
-// ZERO demo-readiness v1.0
+// ZERO demo-readiness v1.1
 // Capa segura para la demo: estado real de Gmail y continuidad basica de trabajo.
 (function(){
   'use strict';
 
   const KEY='zero:demo:context';
-  let ctx={topic:null,pending:null,goal:null};
-  try{ctx={...ctx,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){}
-  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(ctx))}catch(e){}};
+  const TTL=30*60*1000;
+  const fresh=()=>({topic:null,pending:null,goal:null,updatedAt:Date.now()});
+  let ctx=fresh();
+  try{
+    const saved=JSON.parse(localStorage.getItem(KEY)||'null');
+    if(saved&&typeof saved==='object'&&Date.now()-Number(saved.updatedAt||0)<=TTL)ctx={...ctx,...saved};
+  }catch(e){}
+  const save=()=>{ctx.updatedAt=Date.now();try{localStorage.setItem(KEY,JSON.stringify(ctx))}catch(e){}};
+  const clear=()=>{ctx=fresh();try{localStorage.removeItem(KEY)}catch(e){}};
   const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[¿?¡!.,;:]/g,' ').replace(/^\s*zero\b\s*/,'').replace(/\s+/g,' ').trim();
   const say=text=>{try{commandFeedback.textContent=text;commandFeedback.classList.remove('error')}catch(e){}try{if(typeof speak==='function')speak(text)}catch(e){}};
   const yes=q=>/^(si|sii|dale|ok|okay|de una|hacelo|hace eso|perfecto)$/.test(q);
@@ -30,10 +36,9 @@
     const first=document.querySelector('#attention-list .attention-item');
     if(first){
       const title=first.querySelector('strong'),detail=first.querySelector('.attention-copy span'),tag=first.querySelector('.attention-tag');
-      if(title)title.textContent='Gmail laboral conectado';
-      if(detail)detail.textContent='OAuth local activo y telemetría disponible para ZERO.';
-      if(tag)tag.textContent='OK';
-      first.classList.remove('medium');first.classList.add('ok');
+      if(title)title.textContent='Gmail laboral integrado';
+      if(detail)detail.textContent='OAuth local configurado; el estado real aparece cuando el núcleo local está activo.';
+      if(tag)tag.textContent='INTEGRADO';
     }
   }
 
@@ -43,6 +48,10 @@
       const raw=String(value!==null?value:(typeof commandInput!=='undefined'?commandInput.value:'')).trim();
       const q=norm(raw);
       if(!q)return previous(value,fromVoice);
+
+      if(/\b(nuevo contexto|limpia contexto|limpiar contexto|reinicia contexto|reiniciar contexto|empecemos de cero|arranquemos de cero)\b/.test(q)){
+        clear();say('Listo. Arranco con un contexto de trabajo nuevo.');return;
+      }
 
       if(ctx.pending==='sales_open'){
         if(yes(q)){
@@ -84,5 +93,5 @@
 
   patchUi();
   setTimeout(patchUi,500);
-  window.ZERO_DEMO_READINESS={version:'1.0.0',context:()=>({...ctx}),gmail:gmailStatus};
+  window.ZERO_DEMO_READINESS={version:'1.1.0',context:()=>({...ctx}),gmail:gmailStatus,reset:clear};
 })();
