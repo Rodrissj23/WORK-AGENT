@@ -1,9 +1,9 @@
 // Work Agent - Transcription PRO
 // Usa un backend seguro para transcribir audio con OpenAI.
-// Si no hay endpoint configurado, no toca el reconocimiento actual de Chrome.
+// Si el endpoint falla, el sistema sigue pudiendo volver al reconocimiento de Chrome.
 
 const WA_TRANSCRIPTION_CFG = {
-  endpoint: localStorage.getItem('wa_transcription_endpoint') || '',
+  endpoint: localStorage.getItem('wa_transcription_endpoint') || 'https://work-agent-voice-api.vercel.app/api/transcribe',
   maxSeconds: 6,
   mimeCandidates: [
     'audio/webm;codecs=opus',
@@ -34,8 +34,8 @@ function waSetProEndpoint(url){
   } else {
     localStorage.removeItem('wa_transcription_endpoint');
   }
-  WA_TRANSCRIPTION_CFG.endpoint = clean;
-  return clean;
+  WA_TRANSCRIPTION_CFG.endpoint = clean || 'https://work-agent-voice-api.vercel.app/api/transcribe';
+  return WA_TRANSCRIPTION_CFG.endpoint;
 }
 
 async function waStartProRecording(){
@@ -122,7 +122,11 @@ async function waFinishProRecording(){
     });
     clearTimeout(timeout);
 
-    if(!res.ok) throw new Error(`Transcripción HTTP ${res.status}`);
+    if(!res.ok){
+      const detail = await res.json().catch(() => ({}));
+      throw new Error(detail.error || `Transcripción HTTP ${res.status}`);
+    }
+
     const data = await res.json();
     const text = String(data.text || data.transcript || '').trim();
     if(!text) throw new Error('La transcripción volvió vacía.');
@@ -133,12 +137,12 @@ async function waFinishProRecording(){
   }catch(err){
     waCleanupProStream();
     setVoiceState('ready', 'Voz lista');
-    console.warn('Voz PRO falló, se mantiene disponible Chrome fallback:', err);
-    feedback('Voz PRO no respondió. Podés volver a intentar.', true, 'No pude transcribir eso. Probá otra vez.');
+    console.warn('Voz PRO falló:', err);
+    feedback(`Voz PRO no respondió: ${err.message || 'error desconocido'}.`, true, 'No pude transcribir eso. Probá otra vez.');
   }
 }
 
-// Captura el click antes que el listener de Chrome únicamente cuando Voz PRO está configurada.
+// Captura el click antes que el listener de Chrome cuando Voz PRO está configurada.
 if(typeof voiceRun !== 'undefined' && voiceRun){
   voiceRun.addEventListener('click', async e => {
     if(!waTranscriptionProEnabled()) return;
