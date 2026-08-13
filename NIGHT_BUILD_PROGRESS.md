@@ -80,3 +80,56 @@ Estos casos requieren prueba manual con el navegador/Whisper antes de ampliar au
 
 ### Próximo incremento recomendado
 Crear un catálogo unificado de herramientas con metadatos de riesgo y parámetros. Ese catálogo será la base del planificador para que ZERO deje de decidir por coincidencias dispersas y pueda elegir herramientas de forma explícita y auditable.
+
+---
+
+## 13/08/2026 — Catálogo de herramientas + política cognitiva v0.3
+
+### Revisado antes de modificar
+- Últimos commits del repositorio para confirmar el estado v0.2.
+- `cognitive-core.js` v0.2.
+- `access-registry.js` y sus accesos ya conocidos.
+- `ZERO_BRAIN_ARCHITECTURE.md` y el siguiente incremento recomendado.
+- `index.html` para preservar el orden de carga.
+
+### Cambio implementado
+Se agregó `zero-tools.js`, un catálogo descriptivo y auditable de capacidades. Cada herramienta declara:
+- `id` y etiqueta humana;
+- intenciones compatibles;
+- nivel de riesgo (`low`, `medium`, `high`);
+- si es reversible;
+- si modifica datos;
+- si requiere confirmación;
+- parámetros requeridos;
+- estado de conexión cuando corresponde.
+
+El catálogo incluye capacidades actuales de lectura/apertura (briefing, Mini Hub, accesos, Mora, Scoring y liquidaciones) y deja declaradas, pero desconectadas, acciones futuras sensibles como ejecutar Mora o Scoring.
+
+También se agregó `cognitive-policy.js`. Esta capa combina la clasificación del cerebro con el catálogo y produce una decisión auditable:
+1. intención detectada;
+2. herramienta candidata;
+3. parámetros faltantes;
+4. riesgo;
+5. política resultante: permitir, pedir confirmación o no ejecutar.
+
+Expone `ZERO_REASONER.inspect(text)` para diagnóstico sin ejecutar acciones.
+
+Ejemplos esperados:
+- `ZERO_REASONER.inspect('abrí Drive')` → `open_access`, riesgo bajo, permitido si la confianza es suficiente.
+- `ZERO_REASONER.inspect('mujer 9 años')` → `mini_hub_query`, requiere sexo/edad/unidad disponibles en la interpretación.
+- una futura intención `run_mora` → herramienta sensible, no conectada y con confirmación obligatoria.
+
+### Decisión de seguridad arquitectónica
+El primer intento de catálogo incluía ejecutores y fue bloqueado por la capa de seguridad del conector. Se rediseñó correctamente como **catálogo puramente descriptivo**. Los ejecutores siguen viviendo en los módulos estables existentes.
+
+Esto mantiene una separación fuerte:
+- cerebro: entiende;
+- catálogo: sabe qué capacidades existen;
+- policy: decide si sería seguro actuar;
+- ejecutores: siguen aislados y sin autonomía adicional.
+
+### Integración
+`index.html` ahora carga `zero-tools.js` antes de `cognitive-core.js` y `cognitive-policy.js` después del núcleo cognitivo. Se incrementó el cache-busting para forzar carga de estos módulos.
+
+### Próximo incremento recomendado
+Construir un **planificador en modo simulación** que reciba una frase con secuencia (`después`, `y también`) y produzca una lista ordenada de pasos con herramientas, parámetros, riesgo y política, pero sin ejecutar nada. Después de validar esos planes en navegador, recién conectar ejecución automática de pasos exclusivamente reversibles y de bajo riesgo.
