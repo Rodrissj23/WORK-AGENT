@@ -37,10 +37,46 @@ No se afirma conciencia humana o subjetiva. Se modela una conciencia funcional m
 - registro de decisiones,
 - capacidad de describir qué interpretó.
 
-### Próximo incremento recomendado
-Resolver referencias contextuales sin ejecutar todavía tareas encadenadas. Casos objetivo:
-- `abrí Prevención` → `y la planilla también`.
-- `mujer de 7 años` → `y de 14`.
-- `abrime Drive` → `ahora el mail`.
+---
 
-Después de eso: catálogo unificado de herramientas + planificador.
+## 13/08/2026 — Continuidad contextual v0.2
+
+### Revisado antes de modificar
+- Últimos commits del repositorio para confirmar que el núcleo v0.1 era el cambio más reciente.
+- `cognitive-core.js` v0.1.
+- `ZERO_BRAIN_ARCHITECTURE.md`.
+- `access-registry.js` para reutilizar únicamente objetivos ya registrados y no inventar URLs.
+- `index.html` para conservar el orden de carga y la compatibilidad con la pila existente.
+
+### Cambio implementado
+`cognitive-core.js` sube a v0.2 y agrega una pila de contexto corta (hasta 8 focos distintos recientes) además de la memoria de eventos.
+
+Ahora ZERO detecta:
+- continuidad: `y`, `ahora`, `también`, `además`;
+- secuencia: `después`, `luego`, `a continuación`;
+- repetición: `de nuevo`, `otra vez`, `volvelo a abrir`;
+- referencias: `eso`, `esa`, `ese`, `lo mismo`;
+- alternativa contextual: `el otro`, `la otra`.
+
+También:
+- `ZERO_BRAIN.resolveReference(text)` permite inspeccionar cómo resolvió una referencia;
+- `ZERO_BRAIN.snapshot()` incorpora `recentContext`;
+- el metacontrol explica qué referencia tomó y cuándo detectó una posible secuencia;
+- si una frase pide explícitamente reabrir `eso/esa` o repetir una apertura y el último objetivo es un acceso conocido, ZERO puede resolver el alias y delegarlo al `access-registry` existente;
+- `el otro` solo se resuelve si existen al menos dos contextos distintos; si no, queda ambiguo.
+
+### Decisión de seguridad arquitectónica
+No se implementaron acciones encadenadas todavía. La palabra `después` se registra como señal para el futuro planificador, pero no dispara varias acciones por sí sola.
+
+La única ejecución contextual nueva es reabrir un acceso ya conocido y explícitamente solicitado, porque es reversible y no modifica información laboral.
+
+### Pruebas que quedan para navegador
+Estos casos requieren prueba manual con el navegador/Whisper antes de ampliar autonomía:
+- `Zero, abrí Drive` → `abrilo de nuevo`.
+- `Zero, abrí Gmail` → `volvelo a abrir`.
+- después de dos accesos diferentes, probar `abrí el otro` y verificar que seleccione el contexto anterior correcto.
+- `abrí Prevención y después la planilla` debe detectar secuencia pero no ejecutar un plan todavía.
+- verificar que Mini Hub y sus follow-ups sigan pasando por `conversation-bridge.js` sin regresiones.
+
+### Próximo incremento recomendado
+Crear un catálogo unificado de herramientas con metadatos de riesgo y parámetros. Ese catálogo será la base del planificador para que ZERO deje de decidir por coincidencias dispersas y pueda elegir herramientas de forma explícita y auditable.
