@@ -1,0 +1,69 @@
+// ZERO Action Guard v1.0
+// Evita promesas o ejecuciones ambiguas para acciones sensibles durante la demo.
+(function(){
+  'use strict';
+
+  let pending=null;
+
+  function norm(v){
+    return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[¿?¡!.,;:]/g,' ').replace(/^\s*zero\b\s*/,'').replace(/\s+/g,' ').trim();
+  }
+
+  function say(text){
+    try{commandFeedback.textContent=text;commandFeedback.classList.remove('error')}catch(e){}
+    try{if(typeof speak==='function')speak(text)}catch(e){}
+  }
+
+  const yes=q=>/^(si|sii|dale|ok|okay|de una|abrilo|abri|abrime)$/.test(q);
+  const no=q=>/^(no|nop|dejalo|cancelar|cancela|mejor no)$/.test(q);
+  const runVerb=q=>/\b(ejecuta|ejecutar|corre|correr|actualiza|actualizar|procesa|procesar|lanza|lanzar)\b/.test(q);
+  const mailMutation=q=>/\b(manda|mandar|envia|enviar|responde|responder|borra|borrar|elimina|eliminar|archiva|archivar|marca|marcar)\b/.test(q)&&/\b(mail|mails|correo|correos|gmail)\b/.test(q);
+
+  function openKnown(target){
+    try{
+      if(target==='mora'){
+        const previous=window.ZERO_ACTION_GUARD?.base;
+        if(previous)return previous('mora',false);
+      }
+      if(target==='scoring'){
+        const previous=window.ZERO_ACTION_GUARD?.base;
+        if(previous)return previous('scoring',false);
+      }
+    }catch(e){}
+  }
+
+  const previous=window.runCommand||(typeof runCommand!=='undefined'?runCommand:null);
+  if(previous){
+    window.runCommand=runCommand=function(value=null,fromVoice=false){
+      const raw=String(value!==null?value:(typeof commandInput!=='undefined'?commandInput.value:'')).trim();
+      const q=norm(raw);
+
+      if(pending){
+        if(no(q)){pending=null;say('Dale. No ejecuto nada.');return}
+        if(yes(q)){
+          const target=pending;pending=null;
+          if(target==='mora'){say('Te abro Mora. La ejecución automática queda bloqueada hasta que el motor local esté conectado con confirmación.');return previous('mora',fromVoice)}
+          if(target==='scoring'){say('Te abro Scoring. La ejecución remota del Apps Script todavía no está habilitada desde ZERO.');return previous('scoring',fromVoice)}
+        }
+      }
+
+      if(mailMutation(q)){
+        say('Gmail está conectado en modo solo lectura. En esta versión puedo consultar estado y prioridades, pero no envío, borro ni modifico correos.');return;
+      }
+
+      if(runVerb(q)&&/\bmora\b/.test(q)){
+        pending='mora';
+        say('La ejecución de Mora modifica la planilla, así que es una acción sensible. En esta demo todavía no la ejecuto desde el navegador. ¿Querés que abra Mora?');return;
+      }
+
+      if(runVerb(q)&&/\b(scoring|reporte)\b/.test(q)){
+        pending='scoring';
+        say('Scoring vive en Apps Script. Puedo consultar o abrir sus reportes, pero la ejecución remota todavía no está habilitada desde ZERO. ¿Querés que abra Scoring?');return;
+      }
+
+      return previous(value,fromVoice);
+    };
+  }
+
+  window.ZERO_ACTION_GUARD={version:'1.0.0',base:previous,pending:()=>pending};
+})();
