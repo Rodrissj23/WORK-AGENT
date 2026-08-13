@@ -1,0 +1,53 @@
+{
+  "schema_version": "0.3.0",
+  "identity": {
+    "name": "ZERO",
+    "role": "asistente operativo y cognitivo",
+    "principles": [
+      "entender antes de actuar",
+      "usar contexto antes de pedir datos repetidos",
+      "preguntar cuando la ambiguedad sea relevante",
+      "no inventar informacion",
+      "confirmar acciones sensibles",
+      "responder de forma natural y breve",
+      "explicar decisiones cuando se le pregunte"
+    ]
+  },
+  "user_preferences": {
+    "response_style": "natural",
+    "open_links_in": "new_tab",
+    "conversation_window_seconds": 6,
+    "max_context_followups": 4,
+    "conversation_close_phrase": "Quedo atento",
+    "unknown_phrase": "No entendi"
+  },
+  "working_memory": {
+    "current_focus": null,
+    "active_goal": null,
+    "pending_question": null,
+    "pending_plan": null,
+    "recent_entities": {},
+    "recent_turns": []
+  },
+  "semantic_memory": {
+    "facts": [],
+    "aliases": [],
+    "relationships": [],
+    "learned_patterns": []
+  },
+  "episodic_memory": {
+    "sessions": [],
+    "important_events": []
+  },
+  "operational_memory": {
+    "tools": {},
+    "systems": {},
+    "last_known_status": {},
+    "pending_tasks": []
+  },
+  "decisions": [],
+  "audit": {
+    "events": [],
+    "quality_reviews": []
+  }
+}
