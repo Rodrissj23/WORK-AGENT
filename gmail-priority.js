@@ -1,9 +1,21 @@
-// ZERO Gmail Priority v1.1 - compatibilidad.
+// ZERO Gmail Priority v1.2 - compatibilidad + guard de voz.
 // demo-readiness.js ya posee el flujo conversacional completo de Gmail.
 (function(){
   'use strict';
+
+  // Esta capa se carga tarde y siempre: aprovechamos para validar que :8765 sea
+  // realmente Whisper antes de permitir voz local/manos libres.
+  try{
+    if(!window.ZERO_VOICE_CORE_GUARD){
+      const script=document.createElement('script');
+      script.src='voice-core-guard.js?v=20260813-1955';
+      script.async=false;
+      document.head.appendChild(script);
+    }
+  }catch(e){}
+
   if(window.ZERO_DEMO_READINESS){
-    window.ZERO_GMAIL_PRIORITY={version:'1.1.0',delegated:true};
+    window.ZERO_GMAIL_PRIORITY={version:'1.2.0',delegated:true};
     return;
   }
 
@@ -29,5 +41,5 @@
 
   const previous=window.runCommand||(typeof runCommand!=='undefined'?runCommand:null);
   if(previous){window.runCommand=runCommand=function(value=null,fromVoice=false){const raw=String(value!==null?value:(typeof commandInput!=='undefined'?commandInput.value:'')).trim(),q=norm(raw);if(/\b(tengo mails prioritarios|tengo correos prioritarios|mails prioritarios|correos prioritarios|cuales son los prioritarios)\b/.test(q)){report();return}if(/^(de quien|de quienes|y de quien|y de quienes)$/.test(q)){who();return}if(/^(que asuntos|cuales son los asuntos|y los asuntos|que dicen los asuntos)$/.test(q)){subjects();return}return previous(value,fromVoice)}}
-  window.ZERO_GMAIL_PRIORITY={version:'1.1.0',report,who,subjects};
+  window.ZERO_GMAIL_PRIORITY={version:'1.2.0',report,who,subjects};
 })();
