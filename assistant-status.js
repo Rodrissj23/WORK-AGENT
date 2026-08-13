@@ -1,4 +1,4 @@
-// Work Agent - Operational Status + Spoken Briefing
+// Work Agent - Operational Status + Spoken Briefing v1.2
 const WA_STATUS_URL='http://127.0.0.1:8765/status';
 let waStatusCache=null;
 
@@ -16,8 +16,12 @@ function waStatusSentence(name,s){
   if(!s||!s.connected)return null;
   const when=waHumanDate(s.ultima_ejecucion||s.updated_at||s.reported_at);
   if(name==='gmail'){
-    const n=Number(s.pendientes_importantes??s.pendientes??s.total_importantes);
-    if(Number.isFinite(n))return `Tenés ${n} ${n===1?'mail importante pendiente':'mails importantes pendientes'}.`;
+    const pri=Number(s.prioritarios),imp=Number(s.pendientes_importantes??s.pendientes??s.total_importantes),unread=Number(s.no_leidos_recientes);
+    const bits=[];
+    if(Number.isFinite(pri))bits.push(`${pri} ${pri===1?'correo prioritario':'correos prioritarios'}`);
+    if(Number.isFinite(imp))bits.push(`${imp} ${imp===1?'mail marcado importante':'mails marcados importantes'}`);
+    if(!bits.length&&Number.isFinite(unread))bits.push(`${unread} ${unread===1?'no leído reciente':'no leídos recientes'}`);
+    if(bits.length)return `Gmail está conectado: ${bits.join(' y ')}.`;
     return 'Gmail está conectado.';
   }
   const label=name==='mora'?'Mora':'Scoring';
@@ -32,7 +36,7 @@ function waBuildBriefing(systems){
   const gmail=waStatusSentence('gmail',systems?.gmail);if(gmail)parts.push(gmail);
   const mora=waStatusSentence('mora',systems?.mora);if(mora)parts.push(mora);
   const scoring=waStatusSentence('scoring',systems?.scoring);if(scoring)parts.push(scoring);
-  if(parts.length===1)parts.push('Todavía no tengo motores reportando estado real.');
+  if(parts.length===1)parts.push('Todavía no tengo motores reportando estado real en este equipo.');
   return parts.join(' ');
 }
 function waRenderCard(id,title,s){
@@ -41,10 +45,21 @@ function waRenderCard(id,title,s){
   if(!s.connected){if(tag){tag.textContent='○ sin telemetría';tag.classList.remove('ok')}return}
   const when=waHumanDate(s.ultima_ejecucion||s.reported_at);
   if(strong&&when)strong.textContent=when.split(' a las ')[1]||'Actualizado';
-  if(p){const bits=[];if(Number.isFinite(Number(s.procesados)))bits.push(`${s.procesados} procesados`);if(Number.isFinite(Number(s.pendientes_importantes)))bits.push(`${s.pendientes_importantes} pendientes`);p.textContent=bits.join(' · ')||`Último reporte ${when}`}
+  if(p){
+    const bits=[];
+    if(title==='Gmail'){
+      if(Number.isFinite(Number(s.prioritarios)))bits.push(`${s.prioritarios} prioritarios`);
+      if(Number.isFinite(Number(s.pendientes_importantes)))bits.push(`${s.pendientes_importantes} importantes`);
+      if(Number.isFinite(Number(s.no_leidos_recientes)))bits.push(`${s.no_leidos_recientes} no leídos`);
+    }else{
+      if(Number.isFinite(Number(s.procesados)))bits.push(`${s.procesados} procesados`);
+      if(Number.isFinite(Number(s.errores))&&Number(s.errores)>0)bits.push(`${s.errores} errores`);
+    }
+    p.textContent=bits.join(' · ')||`Último reporte ${when}`;
+  }
   if(tag){const err=Number(s.errores||0);tag.textContent=err?`● ${err} errores`:'● actualizado';tag.classList.toggle('ok',!err)}
 }
-function waRenderLiveStatus(systems){waRenderCard('#status-scoring','Scoring',systems.scoring);waRenderCard('#status-mora','Mora',systems.mora);waRenderCard('#status-gmail','Gmail',systems.gmail)}
+function waRenderLiveStatus(systems){systems=systems||{};waRenderCard('#status-scoring','Scoring',systems.scoring);waRenderCard('#status-mora','Mora',systems.mora);waRenderCard('#status-gmail','Gmail',systems.gmail)}
 async function waSpeakBriefing(){
   const systems=await waFetchStatus();const text=waBuildBriefing(systems||{});
   commandFeedback.textContent=text;commandFeedback.classList.remove('error');
