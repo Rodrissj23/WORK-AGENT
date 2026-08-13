@@ -1,9 +1,9 @@
-// ZERO Demo Diagnostics v1.0
+// ZERO Demo Diagnostics v1.1
 // Diagnostico real de disponibilidad + accesos rapidos para una demo robusta.
 (function(){
   'use strict';
 
-  const VERSION='1.0.0';
+  const VERSION='1.1.0';
   const CORE='http://127.0.0.1:8765';
 
   const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[¿?¡!.,;:]/g,' ').replace(/^\s*zero\b\s*/,'').replace(/\s+/g,' ').trim();
@@ -35,6 +35,7 @@
       if(!systems){const raw=await fetchJson(`${CORE}/status`);systems=raw?.systems||raw||null}
     }catch(e){}
 
+    const realCore=!!health?.ok&&(health?.core==='zero-local-core'||health?.engine==='faster-whisper');
     const access=accessCheck();
     const gmail=systems?.gmail||null;
     const gmailAge=ageMinutes(gmail?.ultima_ejecucion||gmail?.reported_at);
@@ -43,9 +44,9 @@
     const scoring=systems?.scoring||null;
 
     const checks=[
-      {id:'core',label:'Nucleo local',ok:!!health?.ok,weight:18,detail:health?.ok?`${health.engine||'core'} · ${health.model||''}`.trim():'sin respuesta'},
-      {id:'voice',label:'Voz local',ok:!!window.WA_VOICE_PRO&&!!health?.ok,weight:12,detail:window.WA_VOICE_PRO?'frontend listo':'frontend no cargado'},
-      {id:'memory',label:'Memoria',ok:!!health?.persistent_memory,weight:10,detail:health?.persistent_memory?'SQLite activa':'no confirmada'},
+      {id:'core',label:'Nucleo local',ok:realCore,weight:18,detail:realCore?`${health.engine||'core'} · ${health.model||''}`.trim():(health?.ok?'hay otro servicio en el puerto':'sin respuesta')},
+      {id:'voice',label:'Voz local',ok:!!window.WA_VOICE_PRO&&realCore,weight:12,detail:realCore?'Whisper disponible':(window.SpeechRecognition||window.webkitSpeechRecognition?'respaldo Chrome disponible':'sin motor confirmado')},
+      {id:'memory',label:'Memoria',ok:realCore&&!!health?.persistent_memory,weight:10,detail:health?.persistent_memory?'SQLite activa':'no confirmada'},
       {id:'cognition',label:'Cognicion',ok:!!window.ZERO_CONVERSATION_V2,weight:15,detail:window.ZERO_CONVERSATION_V2?.version||'no cargada'},
       {id:'access',label:'Accesos de trabajo',ok:access.ok,weight:20,detail:`${access.count}/${access.total} configurados`},
       {id:'gmail',label:'Gmail laboral',ok:gmailFresh,weight:15,detail:gmail?.connected?(gmailFresh?'telemetria reciente':'telemetria desactualizada'):'sin telemetria'},
@@ -56,7 +57,7 @@
     const total=checks.reduce((a,c)=>a+c.weight,0);
     const earned=checks.reduce((a,c)=>a+(c.ok?c.weight:0),0);
     const score=Math.round(earned/total*100);
-    return {score,checks,health,systems,access,gmailAge};
+    return {score,checks,health,systems,access,gmailAge,realCore};
   }
 
   function render(result){
