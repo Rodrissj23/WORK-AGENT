@@ -1,4 +1,4 @@
-// ZERO access-registry v1.6
+// ZERO access-registry v1.7
 // Registro de accesos por voz con URLs estables de trabajo.
 (function(){
   const ACCESS={
@@ -103,7 +103,7 @@
   }
 
   window.ZERO_ACCESS={
-    version:'1.6',
+    version:'1.7',
     registry:ACCESS,
     match:matchAccess,
     exact:exactAccess,
@@ -111,15 +111,29 @@
     setUrl(id,url){if(ACCESS[id])ACCESS[id].url=String(url||'').trim();}
   };
 
-  function loadScript(src){
-    try{const script=document.createElement('script');script.src=src;script.async=true;document.head.appendChild(script)}catch(e){}
+  function loadScript(src,onDone){
+    try{
+      const script=document.createElement('script');
+      script.src=src;
+      script.async=false;
+      if(onDone){script.onload=onDone;script.onerror=onDone}
+      document.head.appendChild(script);
+    }catch(e){if(onDone)onDone()}
   }
 
   loadScript('gmail-ui-sync.js?v=20260813-1811');
 
-  // Al finalizar el arranque, agregamos la capa cognitiva y el respaldo de voz.
+  // Orden estable para demo: cognicion -> fallback de voz -> diagnostico.
   window.addEventListener('load',()=>{
-    if(!window.ZERO_CONVERSATION_V2)loadScript('cognitive-conversation-v2.js?v=20260813-1828');
-    loadScript('voice-fallback.js?v=20260813-1831');
+    const loadSafety=()=>{
+      loadScript('voice-fallback.js?v=20260813-1831',()=>{
+        loadScript('demo-diagnostics.js?v=20260813-1845');
+      });
+    };
+    if(!window.ZERO_CONVERSATION_V2){
+      loadScript('cognitive-conversation-v2.js?v=20260813-1828',loadSafety);
+    }else{
+      loadSafety();
+    }
   },{once:true});
 })();
