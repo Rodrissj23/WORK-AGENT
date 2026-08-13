@@ -68,18 +68,39 @@ Actualizado: 13/08/2026
 - Extensión de Chrome o launcher local.
 - Activación desde segundo plano aunque WORK AGENT no esté visible.
 
-## Fase 8 — CEREBRO ZERO 🧠 ⏳
+## Fase 8 — CEREBRO ZERO 🧠 🚧
 Objetivo: que Zero deje de depender de reglas rígidas y entienda intención, contexto y lenguaje natural por razonamiento.
+
+### Brain v0.2 — comprensión antes que automatización
+- Estado cognitivo persistente ✅
+- Memoria de turnos y foco conversacional ✅
+- Resolución de referencias (`eso`, `la otra`, `de nuevo`) ✅
+- Registro auditable de decisiones ✅
+- Explicación de la última interpretación ✅
+- Registro de herramientas separado del cerebro ✅
+- Planner multiacción ✅ base inicial
+- Clarificación de planes incompletos ✅ base inicial
+- Router conversacional para arbitrar briefing/aclaraciones/comandos ✅
+- Observador / metacontrol funcional ✅ base inicial
+- Puerta de autonomía `EXECUTE / CLARIFY / CONFIRM / BLOCK` ✅
+- Política por confianza + riesgo ✅
+- Memoria semántica de tareas, personas y recursos frecuentes ⏳
+- Selector de herramientas basado en intención + contexto ⏳ estabilizar
+- Confirmaciones persistentes para acciones sensibles ⏳
+- Ejecutar planes multiacción seguros en secuencia ⏳
+- Modelo de lenguaje como capa opcional de razonamiento ⏳
 
 Arquitectura objetivo:
 1. Voz / texto entra a Zero.
 2. El cerebro interpreta intención, contexto y entidades.
-3. Decide si responder, preguntar, abrir algo o ejecutar una herramienta.
-4. Usa herramientas separadas: Mini Hub, accesos, Mora, Scoring, Gmail, Drive, búsquedas, etc.
-5. Mantiene memoria de la conversación y de la operación.
-6. Responde de forma natural y humana.
+3. Evalúa confianza y ambigüedad.
+4. Construye un plan si hay más de una acción.
+5. La capa de autonomía decide: ejecutar, aclarar, confirmar o bloquear.
+6. Usa herramientas separadas: Mini Hub, accesos, Mora, Scoring, Gmail, Drive, búsquedas, etc.
+7. Observa el resultado y actualiza memoria/estado.
+8. Responde de forma natural.
 
-Principio de diseño: las reglas actuales NO son el cerebro final; son herramientas y fallback. El futuro cerebro debe poder reemplazar la lógica rígida sin reescribir los motores.
+Principio de diseño: **razonar puede ser flexible; ejecutar tiene que ser controlado**. Las reglas actuales NO son el cerebro final; son herramientas y fallback. El futuro cerebro debe poder reemplazar la lógica rígida sin reescribir los motores.
 
 ## Fase 9 — ZERO avanzado ⏳
 - Preguntas naturales sobre todos los motores.
@@ -87,6 +108,7 @@ Principio de diseño: las reglas actuales NO son el cerebro final; son herramien
 - Resumen operativo al iniciar jornada.
 - Alertas proactivas.
 - Historial central de eventos y decisiones.
-- Memoria de trabajo.
+- Memoria de trabajo y memoria semántica.
 - Personalidad y voz configurable.
 - Razonamiento sobre tareas encadenadas.
+- Cerebro híbrido: razonamiento local/remoto + herramientas deterministas.
